@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.astro/
+.cache/
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# Dati generati da scripts/fetch-fuel-data.js
+src/data/fuel/
+public/data/
+
+# Archivi per la messa online
+*.zip

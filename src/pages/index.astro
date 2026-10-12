@@ -1,0 +1,337 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HeroMap from '../components/HeroMap.astro';
+import PriceCards from '../components/PriceCards.astro';
+import FAQ from '../components/FAQ.astro';
+import {
+  FUELS, FUEL_KEYS, MIN_IMPIANTI_SIGNIFICATIVI,
+  getMeta, getNazionale, getRegioni, getProvince, getComuni, getMarche, getAutostrade,
+  prezzo, diffCent, euro, numero, dataLunga,
+} from '../lib/fuel';
+import { SITE } from '../config/site';
+
+const meta = getMeta();
+const { stats: naz, autostrada } = getNazionale();
+const regioni = getRegioni().filter((r) => r.count > 0);
+const province = getProvince().filter((p) => p.count > 0);
+const comuni = getComuni();
+const marche = getMarche().filter((m) => m.slug !== 'altri-marchi');
+const autostrade = getAutostrade();
+
+const benzina = naz.benzina!;
+const gasolio = naz.gasolio!;
+
+// Fatti del giorno, ricalcolati a ogni build: è ciò che rende la pagina
+// diversa da un giorno all'altro.
+const byBenzina = <T extends { stats: { benzina?: { avg: number } } }>(list: T[]) =>
+  list.filter((x) => x.stats.benzina).sort((a, b) => a.stats.benzina!.avg - b.stats.benzina!.avg);
+
+const regioniBenzina = byBenzina(regioni);
+const regioneMin = regioniBenzina[0];
+const regioneMax = regioniBenzina.at(-1)!;
+
+const provinceBenzina = byBenzina(province);
+const provinceMin = provinceBenzina.slice(0, 5);
+const provinceMax = provinceBenzina.slice(-5).reverse();
+
+// Le medie dei marchi contano solo con una rete abbastanza ampia.
+const marcheBenzina = byBenzina(marche.filter((m) => m.count >= 100));
+const marcaMin = marcheBenzina[0];
+
+const scartoServito = benzina.servito != null ? benzina.servito - benzina.avg : null;
+const scartoAutostrada =
+  autostrada.autostrada.benzina && autostrada.strada.benzina
+    ? autostrada.autostrada.benzina.servito != null && autostrada.strada.benzina.servito != null
+      ? autostrada.autostrada.benzina.servito - autostrada.strada.benzina.servito
+      : null
+    : null;
+
+const grandiCitta = comuni.filter((c) => c.count >= MIN_IMPIANTI_SIGNIFICATIVI).slice(0, 36);
+const cent = (n: number) => (n * 100).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+const faq = [
+  {
+    question: 'Quanto costa oggi la benzina in Italia?',
+    answer: `Il ${dataLunga(meta.lastUpdate)} il prezzo medio nazionale della benzina in modalità self service è di ${prezzo(benzina.avg)} €/L${benzina.servito ? `, quello del servito di ${prezzo(benzina.servito)} €/L` : ''}. Il gasolio self costa in media ${prezzo(gasolio.avg)} €/L. Le medie sono calcolate su ${numero(meta.totalStations)} distributori.`,
+  },
+  {
+    question: 'Come trovo il distributore più economico vicino a me?',
+    answer: 'Scrivi il nome del tuo comune o il CAP nella barra di ricerca in cima alla pagina, oppure clicca su «Trova un distributore vicino a me» per usare la posizione del telefono. L’elenco a fianco della mappa mostra i distributori dal più economico al più caro per il carburante scelto.',
+  },
+  {
+    question: 'Da dove arrivano i prezzi?',
+    answer: 'Dall’Osservaprezzi carburanti del Ministero delle Imprese e del Made in Italy (MIMIT). In base all’art. 51 della legge 99/2009 i gestori comunicano al Ministero i prezzi praticati. I dati sono pubblicati come open data con licenza IODL 2.0.',
+  },
+  {
+    question: 'Ogni quanto vengono aggiornati i prezzi?',
+    answer: 'Una volta al giorno. Il Ministero pubblica ogni mattina i prezzi in vigore alle 8 del giorno precedente: la data dei dati è indicata in cima a ogni pagina. Il prezzo esposto alla pompa può essere cambiato nel frattempo e resta l’unico che fa fede.',
+  },
+  {
+    question: 'Quanto si risparmia con il self service rispetto al servito?',
+    answer: scartoServito
+      ? `In media ${cent(scartoServito)} centesimi al litro sulla benzina: su un pieno da 50 litri sono ${euro(scartoServito * 50)} €. La differenza varia molto da un impianto all’altro, per questo nelle tabelle indichiamo entrambi i prezzi quando sono diversi.`
+      : 'Il servito costa di più del self in quasi tutti gli impianti che offrono entrambe le modalità. Nelle tabelle indichiamo entrambi i prezzi quando sono diversi.',
+  },
+  {
+    question: 'Dove trovo i distributori di GPL e metano?',
+    answer: `Nella mappa seleziona GPL o Metano sopra l’elenco: restano solo gli impianti che li vendono. Oggi hanno un prezzo comunicato ${numero(naz.gpl?.n ?? 0)} distributori di GPL e ${numero(naz.metano?.n ?? 0)} di metano, su ${numero(meta.totalStations)} impianti.`,
+  },
+  {
+    question: `${SITE.name} è un sito ufficiale?`,
+    answer: `No. ${SITE.name} è un sito indipendente che riutilizza i dati pubblici del Ministero per renderli più facili da consultare. Non è collegato al MIMIT né ad alcuna compagnia petrolifera, e il servizio è gratuito.`,
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${SITE.url}/#website`,
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    description: SITE.tagline,
+    inLanguage: SITE.lang,
+    dateModified: meta.lastUpdate,
+    publisher: { '@id': `${SITE.url}/#organization` },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${SITE.url}/#organization`,
+    name: SITE.name,
+    url: `${SITE.url}/`,
+    logo: { '@type': 'ImageObject', url: `${SITE.url}/apple-touch-icon.png`, width: 180, height: 180 },
+    description: 'Sito indipendente di confronto dei prezzi dei carburanti in Italia, basato sugli open data del MIMIT.',
+    areaServed: 'IT',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: `Confronto prezzi carburanti ${SITE.name}`,
+    url: `${SITE.url}/`,
+    applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Web',
+    inLanguage: SITE.lang,
+    description: `Prezzi di benzina, gasolio, GPL e metano in ${numero(meta.totalStations)} distributori italiani, aggiornati ogni giorno.`,
+    dateModified: meta.lastUpdate,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+    provider: { '@id': `${SITE.url}/#organization` },
+  },
+];
+---
+
+<BaseLayout
+  title={`Prezzi benzina e gasolio oggi | ${SITE.name}`}
+  description={`Prezzi carburanti oggi: benzina ${prezzo(benzina.avg)} €/L, gasolio ${prezzo(gasolio.avg)} €/L (self). Trova il distributore più economico vicino a te su mappa.`}
+  canonical="/"
+  jsonLd={jsonLd}
+>
+  <!-- Connessione anticipata alle tessere della mappa (caricata in differita) -->
+  <link rel="preconnect" href="https://a.tile.openstreetmap.org" slot="head" />
+  <link rel="preconnect" href="https://b.tile.openstreetmap.org" slot="head" />
+
+  <HeroMap />
+
+  <!-- Prezzi medi di oggi -->
+  <section class="pp-section" aria-labelledby="h-oggi">
+    <div class="container">
+      <h2 id="h-oggi">Prezzi carburanti oggi in Italia</h2>
+      <PriceCards stats={naz} link />
+      <div class="pp-text" style="margin-top:1rem">
+        <p>
+          Il {dataLunga(meta.lastUpdate)} la benzina self service costa in media <strong>{prezzo(benzina.avg)} €/L</strong>
+          e il gasolio <strong>{prezzo(gasolio.avg)} €/L</strong>
+          {diffCent(gasolio.avg, benzina.avg) && <> ({diffCent(gasolio.avg, benzina.avg)} rispetto alla benzina)</>}.
+          {naz.gpl && <> Il GPL è a {prezzo(naz.gpl.avg)} €/L</>}{naz.metano && <> e il metano a {prezzo(naz.metano.avg)} €/kg</>}.
+          Le medie sono calcolate sui prezzi comunicati al Ministero da {numero(meta.totalStations)} distributori:
+          come le calcoliamo è spiegato nella <a href="/prezzi-carburanti/metodologia/">metodologia</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fatti del giorno -->
+  <section class="pp-section pp-alt" aria-labelledby="h-dove">
+    <div class="container">
+      <h2 id="h-dove">Dove costa meno la benzina oggi?</h2>
+      <div class="pp-facts">
+        <a class="pp-fact" href={`/prezzi-carburanti/regione/${regioneMin.slug}/`}>
+          <span class="pp-fact-label">Regione più economica</span>
+          <span class="pp-fact-value">{regioneMin.name}</span>
+          <span class="pp-fact-note">Benzina self a {prezzo(regioneMin.stats.benzina!.avg)} €/L in media</span>
+        </a>
+        <a class="pp-fact" href={`/prezzi-carburanti/regione/${regioneMax.slug}/`}>
+          <span class="pp-fact-label">Regione più cara</span>
+          <span class="pp-fact-value">{regioneMax.name}</span>
+          <span class="pp-fact-note">{prezzo(regioneMax.stats.benzina!.avg)} €/L, {cent(regioneMax.stats.benzina!.avg - regioneMin.stats.benzina!.avg)} cent in più</span>
+        </a>
+        {marcaMin && (
+          <a class="pp-fact" href={`/prezzi-carburanti/marca/${marcaMin.slug}/`}>
+            <span class="pp-fact-label">Rete più economica</span>
+            <span class="pp-fact-value">{marcaMin.name}</span>
+            <span class="pp-fact-note">{prezzo(marcaMin.stats.benzina!.avg)} €/L in media, {numero(marcaMin.count)} impianti</span>
+          </a>
+        )}
+        {scartoServito != null && (
+          <a class="pp-fact" href="/prezzo-benzina/#self-servito">
+            <span class="pp-fact-label">Self contro servito</span>
+            <span class="pp-fact-value">{cent(scartoServito)} cent al litro</span>
+            <span class="pp-fact-note">{euro(scartoServito * 50)} € di differenza su un pieno da 50 litri</span>
+          </a>
+        )}
+      </div>
+
+      <div class="pp-tops" style="margin-top:0.75rem">
+        <div class="pp-top">
+          <h3>Le province più economiche (benzina)</h3>
+          <ol>
+            {provinceMin.map((p) => (
+              <li>
+                <span><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a><small>{p.regione}</small></span>
+                <strong>{prezzo(p.stats.benzina!.avg)}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class="pp-top">
+          <h3>Le province più care (benzina)</h3>
+          <ol>
+            {provinceMax.map((p) => (
+              <li>
+                <span><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a><small>{p.regione}</small></span>
+                <strong>{prezzo(p.stats.benzina!.avg)}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+      <p class="pp-note">
+        Medie dei prezzi self service. Classifiche complete:
+        {FUEL_KEYS.map((k, i) => <>{i > 0 && ', '}<a href={`/${FUELS[k].slug}/`}>{FUELS[k].label.toLowerCase() === 'gpl' ? 'GPL' : FUELS[k].label.toLowerCase()}</a></>)}.
+      </p>
+    </div>
+  </section>
+
+  <!-- Regioni -->
+  <section class="pp-section" aria-labelledby="h-regioni">
+    <div class="container">
+      <h2 id="h-regioni">Prezzi carburanti per regione</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Regione</th>
+              <th scope="col" class="num">Distributori</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {regioni.map((r) => (
+              <tr>
+                <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>Prezzi carburanti {r.name}</a></td>
+                <td class="num">{numero(r.count)}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(r.stats[k]?.avg)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="pp-note">Benzina e gasolio: prezzi medi self service, in €/L. GPL in €/L, metano in €/kg. <a href="/prezzi-carburanti/province/">Vedi tutte le 107 province</a>.</p>
+    </div>
+  </section>
+
+  <!-- Città -->
+  <section class="pp-section" aria-labelledby="h-citta">
+    <div class="container">
+      <h2 id="h-citta">Prezzi benzina nelle principali città</h2>
+      <div class="pp-links">
+        {grandiCitta.map((c) => (
+          <a href={`/prezzi-carburanti/comune/${c.slug}/`}>
+            {c.name}
+            <small>{prezzo(c.stats.benzina?.avg)} €/L</small>
+          </a>
+        ))}
+      </div>
+      <p class="pp-note"><a href="/prezzi-carburanti/">Tutti i prezzi per regione, provincia e comune</a></p>
+    </div>
+  </section>
+
+  <!-- Marchi e autostrade -->
+  <section class="pp-section pp-alt">
+    <div class="container">
+      <h2>Prezzi per marchio</h2>
+      <div class="pp-links">
+        {marche.slice(0, 15).map((m) => (
+          <a href={`/prezzi-carburanti/marca/${m.slug}/`}>
+            {m.name}
+            <small>{prezzo(m.stats.benzina?.avg)} €/L</small>
+          </a>
+        ))}
+      </div>
+      <p class="pp-note"><a href="/prezzi-carburanti/marca/">Confronta tutti i marchi</a></p>
+
+      <h2 style="margin-top:2rem">Prezzi carburanti in autostrada</h2>
+      <div class="pp-text">
+        <p>
+          Sulla rete autostradale abbiamo i prezzi di {numero(autostrada.countAutostrada)} aree di servizio.
+          {scartoAutostrada != null && scartoAutostrada > 0 && (
+            <> Il servito in autostrada costa in media {cent(scartoAutostrada)} centesimi al litro in più rispetto alla rete stradale.</>
+          )}
+          {' '}Scegli l'autostrada per vedere le aree di servizio e i loro prezzi.
+        </p>
+      </div>
+      <div class="pp-links" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">
+        {autostrade.filter((a) => a.count >= 5).map((a) => (
+          <a href={`/prezzi-carburanti/autostrada/${a.slug}/`}>
+            {a.code}
+            <small>{a.count} aree</small>
+          </a>
+        ))}
+      </div>
+      <p class="pp-note"><a href="/prezzi-carburanti/autostrada/">Tutte le autostrade</a></p>
+    </div>
+  </section>
+
+  <!-- Testo editoriale -->
+  <section class="pp-section" aria-labelledby="h-perche">
+    <div class="container pp-text">
+      <h2 id="h-perche">Perché confrontare i prezzi prima di fare il pieno</h2>
+      <p>
+        Il prezzo cambia da un distributore all'altro, anche nello stesso comune. Su un pieno da 50 litri,
+        10 centesimi di differenza sono {euro(5)} €: per chi fa due pieni al mese, {euro(120)} € all'anno.
+      </p>
+      <p>
+        Il dato esiste già, ed è pubblico: i gestori comunicano i propri prezzi al Ministero delle Imprese
+        e del Made in Italy, che li pubblica come open data. <strong>{SITE.name}</strong> prende quei dati ogni giorno e li rende semplici da leggere:
+        una <a href="#hm-title">mappa</a> con tutti i distributori, una pagina per ogni
+        <a href="/prezzi-carburanti/">regione, provincia e comune</a>, il confronto tra i
+        <a href="/prezzi-carburanti/marca/">marchi</a> e le classifiche per carburante.
+      </p>
+
+      <h2>Self o servito: la differenza che pesa di più</h2>
+      <p>
+        Molti impianti italiani espongono due prezzi per lo stesso carburante: self service e servito.
+        {scartoServito != null && (
+          <> La differenza media sulla benzina è oggi di {cent(scartoServito)} centesimi al litro, cioè {euro(scartoServito * 50)} € su un pieno da 50 litri.</>
+        )}
+        {' '}In tutte le nostre tabelle il prezzo principale
+        è quello self, e il servito è indicato quando è diverso.
+      </p>
+
+      <h2>Benzina, gasolio, GPL e metano</h2>
+      <p>
+        Confrontiamo i quattro carburanti standard. Per la <a href="/prezzo-benzina/">benzina</a> e il
+        <a href="/prezzo-gasolio/">gasolio</a> trovi quasi tutti i distributori d'Italia. Il
+        <a href="/prezzo-gpl/">GPL</a> e il <a href="/prezzo-metano/">metano</a> sono venduti solo in una parte
+        degli impianti: per chi guida un'auto a gas sapere dove rifornirsi conta quanto il prezzo. I carburanti
+        «premium» dei singoli marchi non sono inclusi nelle medie, perché non sono confrontabili tra loro.
+      </p>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container" style="max-width:52rem">
+      <FAQ items={faq} title="Domande frequenti sui prezzi dei carburanti" />
+    </div>
+  </section>
+</BaseLayout>

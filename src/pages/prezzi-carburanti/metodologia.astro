@@ -1,0 +1,81 @@
+---
+import PrezziLayout from '../../layouts/PrezziLayout.astro';
+import { getMeta, numero, MIN_IMPIANTI_SIGNIFICATIVI } from '../../lib/fuel';
+import { SITE } from '../../config/site';
+
+const meta = getMeta();
+---
+
+<PrezziLayout
+  title="Metodologia: da dove vengono i prezzi e come li calcoliamo"
+  description={`Fonte dei dati, frequenza di aggiornamento, calcolo delle medie e limiti: la metodologia del confronto prezzi carburanti di ${SITE.name}.`}
+  h1="Metodologia"
+  lead="Da dove vengono i prezzi, quando sono aggiornati e come calcoliamo le medie."
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Metodologia', href: '/prezzi-carburanti/metodologia/' },
+  ]}
+  count={meta.totalStations}
+>
+  <section class="pp-section">
+    <div class="container pp-text">
+      <h2>1. La fonte</h2>
+      <p>
+        Tutti i prezzi provengono dall'Osservaprezzi carburanti del Ministero delle Imprese e del Made in Italy (MIMIT).
+        In base all'articolo 51 della legge 99/2009 i gestori degli impianti di distribuzione devono comunicare al
+        Ministero i prezzi praticati per ogni carburante.
+      </p>
+      <p>
+        Il Ministero pubblica questi dati come open data con licenza
+        <a href={SITE.dataSource.licenceUrl} rel="noopener noreferrer license">Italian Open Data License 2.0</a>:
+        <a href={SITE.dataSource.url} rel="noopener noreferrer">Carburanti, prezzi praticati e anagrafica degli impianti</a>.
+        {SITE.name} è un sito indipendente e non ha alcun carattere di ufficialità.
+      </p>
+
+      <h2>2. L'aggiornamento</h2>
+      <p>
+        Ogni mattina il Ministero pubblica i prezzi in vigore alle 8 del giorno precedente. Scarichiamo il file una volta
+        al giorno e ricalcoliamo tutte le pagine. La data dei prezzi è indicata in cima a ogni pagina.
+      </p>
+      <p>
+        Un gestore può cambiare prezzo in qualsiasi momento: il prezzo esposto alla pompa può quindi essere diverso
+        da quello mostrato qui, ed è l'unico che fa fede. Per la consultazione in tempo reale esiste il sito
+        ufficiale dell'Osservaprezzi.
+      </p>
+
+      <h2>3. Il calcolo</h2>
+      <p>
+        Il prezzo medio di un comune, di una provincia, di una regione o di un marchio è la media aritmetica dei prezzi
+        dei distributori che ne fanno parte. Ogni impianto pesa allo stesso modo, indipendentemente dai litri venduti:
+        per questo le nostre medie possono differire da quelle pubblicate dal Ministero.
+      </p>
+      <p>
+        Per benzina e gasolio le medie sono calcolate sui soli prezzi <strong>self service</strong>; la media del
+        servito è calcolata e indicata a parte. Un impianto che vende solo in modalità servito compare negli elenchi
+        con la dicitura «solo servito», ma non entra nella media self. Per GPL e metano non si distingue tra le
+        due modalità.
+      </p>
+      <p>
+        Escludiamo i prezzi non confermati da più di 30 giorni e quelli palesemente errati: i valori fuori da limiti
+        fissi (per esempio una benzina sotto 1,20 o sopra 3,20 €/L) e quelli troppo lontani dalla mediana nazionale del
+        giorno (per benzina e gasolio, oltre il 20% in meno o il 35% in più), che corrispondono quasi sempre a un errore
+        di inserimento. Oggi entrano nel calcolo {numero(meta.totalStations)} distributori in {numero(meta.totalComuni)} comuni.
+      </p>
+
+      <h2>4. I carburanti</h2>
+      <p>
+        Confrontiamo benzina, gasolio, GPL e metano nelle loro denominazioni standard. I carburanti «premium» o speciali
+        dei singoli marchi (gasoli additivati, HVO, benzine a 100 ottani) sono esclusi: hanno nomi e caratteristiche
+        diverse da una rete all'altra e non sono confrontabili.
+      </p>
+      <p>Il metano è venduto al chilogrammo, gli altri carburanti al litro.</p>
+
+      <h2>5. I limiti</h2>
+      <p>
+        Nei comuni con meno di {MIN_IMPIANTI_SIGNIFICATIVI} distributori la media è poco significativa. La sigla dell'autostrada
+        è ricavata dall'indirizzo comunicato dal gestore e può mancare. Indirizzi, marchi e coordinate sono quelli
+        dichiarati dai gestori: se noti un errore puoi <a href="/contatti/">segnalarcelo</a>.
+      </p>
+    </div>
+  </section>
+</PrezziLayout>

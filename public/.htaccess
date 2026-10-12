@@ -1,0 +1,71 @@
+# Configurazione Apache/LiteSpeed (Hostinger), ripresa dal sito francese.
+# Non ripresa: la Content-Security-Policy, scritta per Analytics e AdSense
+# che qui non sono attivi.
+
+# Pagina 404 personalizzata
+ErrorDocument 404 /404.html
+
+RewriteEngine On
+RewriteBase /
+
+# HTTP → HTTPS (301)
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# www → senza www (301)
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+# Intestazioni di sicurezza
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "0"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=15768000; includeSubDomains"
+    Header set Permissions-Policy "geolocation=(self), camera=(), microphone=()"
+</IfModule>
+
+# Cache: file di Astro con hash nel nome e Leaflet → 1 anno.
+# <FilesMatch> guarda solo il nome del file, non il percorso: si usa SetEnvIf.
+# Se Leaflet viene aggiornato, rinominare la cartella per invalidare la cache.
+<IfModule mod_headers.c>
+    SetEnvIf Request_URI "^/_astro/" IS_HASHED_ASSET
+    Header set Cache-Control "public, max-age=31536000, immutable" env=IS_HASHED_ASSET
+
+    SetEnvIf Request_URI "^/vendor/" IS_VENDOR_ASSET
+    Header set Cache-Control "public, max-age=31536000, immutable" env=IS_VENDOR_ASSET
+</IfModule>
+
+# Compressione dei file di testo
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml application/xml
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # Immagini → 1 mese
+    ExpiresByType image/webp          "access plus 1 month"
+    ExpiresByType image/jpeg          "access plus 1 month"
+    ExpiresByType image/png           "access plus 1 month"
+    ExpiresByType image/svg+xml       "access plus 1 month"
+    ExpiresByType image/x-icon        "access plus 1 month"
+
+    # Font → 1 anno
+    ExpiresByType font/woff2          "access plus 1 year"
+
+    # HTML e dati → 1 ora (prezzi aggiornati ogni giorno)
+    ExpiresByType text/html           "access plus 1 hour"
+    ExpiresByType application/json    "access plus 1 hour"
+</IfModule>
+
+# impianti.json (oltre 2 MB) è caricato dalla mappa: cache del browser di 1 ora
+<IfModule mod_headers.c>
+    <FilesMatch "\.json$">
+        Header set Cache-Control "public, max-age=3600"
+        Header unset Pragma
+    </FilesMatch>
+</IfModule>

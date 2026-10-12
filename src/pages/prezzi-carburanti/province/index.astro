@@ -1,0 +1,48 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import { FUELS, FUEL_KEYS, getMeta, getRegioni, getProvince, prezzo, numero } from '../../../lib/fuel';
+
+const meta = getMeta();
+const regioni = getRegioni().filter((r) => r.count > 0);
+const province = getProvince().filter((p) => p.count > 0);
+---
+
+<PrezziLayout
+  title="Prezzi benzina e gasolio per provincia: tutte le 107"
+  description="Prezzi medi di benzina, gasolio, GPL e metano in tutte le province italiane, regione per regione. Dati MIMIT aggiornati ogni giorno."
+  h1="Prezzi carburanti per provincia"
+  lead="Le medie di oggi in tutte le province italiane, raggruppate per regione."
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Province', href: '/prezzi-carburanti/province/' },
+  ]}
+  count={meta.totalStations}
+>
+  {regioni.map((r) => (
+    <section class="pp-section">
+      <div class="container">
+        <h2><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></h2>
+        <div class="table-wrapper">
+          <table class="pp-table">
+            <thead>
+              <tr>
+                <th scope="col">Provincia</th>
+                <th scope="col" class="num">Distributori</th>
+                {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {province.filter((p) => r.province.includes(p.sigla)).map((p) => (
+                <tr>
+                  <td><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name} ({p.sigla})</a></td>
+                  <td class="num">{numero(p.count)}</td>
+                  {FUEL_KEYS.map((k) => <td class="num">{prezzo(p.stats[k]?.avg)}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  ))}
+</PrezziLayout>

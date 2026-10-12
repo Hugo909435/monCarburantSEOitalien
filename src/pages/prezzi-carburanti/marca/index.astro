@@ -1,0 +1,69 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import { FUELS, FUEL_KEYS, getNazionale, getMarche, prezzo, diffCent, numero } from '../../../lib/fuel';
+import { marcheIndicizzabili } from '../../../config/indicizzazione.mjs';
+
+const naz = getNazionale().stats;
+const marche = getMarche()
+  .filter((m) => m.stats.benzina)
+  .sort((a, b) => a.stats.benzina!.avg - b.stats.benzina!.avg);
+const bianche = marche.find((m) => m.slug === 'pompe-bianche');
+---
+
+<PrezziLayout
+  title="Prezzi benzina per marchio: Eni, IP, Q8, Esso a confronto"
+  description="Quale marchio costa meno? Prezzi medi di benzina, gasolio, GPL e metano per Eni, IP, Q8, Esso, Tamoil e pompe bianche, aggiornati ogni giorno."
+  h1="Prezzi carburanti per marchio"
+  lead="Il prezzo medio di oggi per ogni rete di distribuzione, dal marchio più economico al più caro sulla benzina."
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Marchi', href: '/prezzi-carburanti/marca/' },
+  ]}
+  noIndex={!marcheIndicizzabili}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Confronto tra i marchi</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Marchio</th>
+              <th scope="col" class="num">Impianti</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+              <th scope="col" class="num">Benzina, scarto dalla media</th>
+            </tr>
+          </thead>
+          <tbody>
+            {marche.map((m) => (
+              <tr>
+                <td>{m.slug === 'altri-marchi' ? m.name : <a href={`/prezzi-carburanti/marca/${m.slug}/`}>{m.name}</a>}</td>
+                <td class="num">{numero(m.count)}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(m.stats[k]?.avg)}</td>)}
+                <td class="num">{diffCent(m.stats.benzina!.avg, naz.benzina?.avg)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="pp-note">Benzina e gasolio: prezzi medi self service, in €/L. GPL in €/L, metano in €/kg. «Altri marchi» riunisce le reti con meno di 40 impianti.</p>
+    </div>
+  </section>
+
+  {bianche?.stats.benzina && naz.benzina && (
+    <section class="pp-section">
+      <div class="container pp-text">
+        <h2>Pompe bianche e grandi marchi</h2>
+        <p>
+          Nei dati del Ministero «Pompe bianche» indica i distributori senza l'insegna di una compagnia petrolifera.
+          Oggi sono {numero(bianche.count)} e vendono la benzina self a {prezzo(bianche.stats.benzina.avg)} €/L in media,
+          {' '}{diffCent(bianche.stats.benzina.avg, naz.benzina.avg)} rispetto alla media di tutti i distributori.
+        </p>
+        <p>
+          Le medie per marchio dipendono anche da dove si trovano gli impianti: per scegliere dove fare il pieno
+          conviene guardare i <a href="/prezzi-carburanti/">prezzi del proprio comune</a>.
+        </p>
+      </div>
+    </section>
+  )}
+</PrezziLayout>

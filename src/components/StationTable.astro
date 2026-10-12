@@ -1,0 +1,94 @@
+---
+// Tabella degli impianti, ordinabile per carburante lato client.
+import { FUELS, FUEL_KEYS, prezzo, nomeImpianto, type FuelKey, type Impianto } from '../lib/fuel';
+
+interface Props {
+  stations: Impianto[];
+  sortBy?: FuelKey;
+  /** Mostra il comune (pagine provincia, marchio, autostrada) */
+  showComune?: boolean;
+  /** Righe visibili prima del pulsante "mostra tutti" */
+  initial?: number;
+}
+
+const { stations, sortBy = 'benzina', showComune = false, initial = 40 } = Astro.props;
+
+// Solo i carburanti venduti da almeno un impianto dell'elenco.
+const fuels = FUEL_KEYS.filter((k) => stations.some((s) => s.p[k] != null));
+const sorted = [...stations].sort((a, b) => (a.p[sortBy] ?? Infinity) - (b.p[sortBy] ?? Infinity));
+const mins = Object.fromEntries(fuels.map((k) => [k, Math.min(...stations.map((s) => s.p[k] ?? Infinity))])) as Record<FuelKey, number>;
+---
+
+<div data-station-table>
+  <div class="pp-sort" role="group" aria-label="Ordina per carburante">
+    <span>Ordina per prezzo:</span>
+    {fuels.map((k) => (
+      <button type="button" data-sort={k} aria-pressed={k === sortBy ? 'true' : 'false'}>{FUELS[k].label}</button>
+    ))}
+  </div>
+
+  <div class="table-wrapper">
+    <table class="pp-table pp-stations">
+      <thead>
+        <tr>
+          <th scope="col">Distributore</th>
+          {fuels.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((s, i) => (
+          <tr {...Object.fromEntries(fuels.map((k) => [`data-${k}`, s.p[k] ?? '']))} hidden={i >= initial}>
+            <td>
+              <span class="pp-st-name">{nomeImpianto(s)}{s.aut && s.aut !== 'altre' ? ` · ${s.aut}` : ''}</span>
+              <span class="pp-st-addr">
+                {s.addr}{showComune && <>, <a href={`/prezzi-carburanti/comune/${s.comuneSlug}/`}>{s.comune}</a> ({s.sigla})</>}
+              </span>
+            </td>
+            {fuels.map((k) => (
+              <td class:list={['num', s.p[k] == null && 'is-empty', s.p[k] != null && s.p[k] === mins[k] && 'is-min']} data-label={FUELS[k].label}>
+                {s.p[k] != null ? prezzo(s.p[k]) : ''}
+                {s.x.includes(k) && <span class="pp-servito">solo servito</span>}
+                {s.s[k] != null && <span class="pp-servito">servito {prezzo(s.s[k])}</span>}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {sorted.length > initial && (
+    <button type="button" class="pp-more" data-more>Mostra tutti i {sorted.length} distributori</button>
+  )}
+  <p class="pp-note">Prezzi in €/L (metano in €/kg). Per benzina e gasolio il prezzo è quello self service; quando un impianto ha solo il servito è indicato «solo servito».</p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-station-table]').forEach((root) => {
+    const tbody = root.querySelector('tbody')!;
+    const buttons = root.querySelectorAll<HTMLButtonElement>('[data-sort]');
+    const more = root.querySelector<HTMLButtonElement>('[data-more]');
+    let limit = more ? [...tbody.rows].filter((r) => !r.hidden).length : Infinity;
+
+    const price = (row: HTMLTableRowElement, key: string) => {
+      const v = parseFloat(row.dataset[key] ?? '');
+      return Number.isNaN(v) ? Infinity : v;
+    };
+
+    function apply(key: string) {
+      const rows = [...tbody.rows].sort((a, b) => price(a, key) - price(b, key));
+      rows.forEach((r, i) => {
+        r.hidden = i >= limit;
+        tbody.appendChild(r);
+      });
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === key)));
+    }
+
+    buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.sort!)));
+    more?.addEventListener('click', () => {
+      limit = Infinity;
+      [...tbody.rows].forEach((r) => (r.hidden = false));
+      more.remove();
+    });
+  });
+</script>

@@ -1,0 +1,146 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import PriceCards from '../../../components/PriceCards.astro';
+import TopStations from '../../../components/TopStations.astro';
+import StationTable from '../../../components/StationTable.astro';
+import LocalMap from '../../../components/LocalMap.astro';
+import FAQ from '../../../components/FAQ.astro';
+import {
+  FUELS,
+  getComuni, getProvincia, getImpiantiProvincia, piuEconomici, fuelsOf,
+  prezzo, diffCent, euro, numero, nomeImpianto, modo, type Comune,
+} from '../../../lib/fuel';
+import { comuneIndicizzabile } from '../../../config/indicizzazione.mjs';
+
+export function getStaticPaths() {
+  return getComuni().map((comune) => ({ params: { slug: comune.slug }, props: { comune } }));
+}
+
+interface Props { comune: Comune }
+const { comune } = Astro.props;
+
+const provincia = getProvincia(comune.sigla);
+const impianti = getImpiantiProvincia(comune.sigla).filter((s) => s.comuneSlug === comune.slug);
+
+// Comuni vicini: i più prossimi nella stessa provincia.
+const dist = (c: Comune) => Math.hypot((c.lat - comune.lat) * 111, (c.lng - comune.lng) * 85);
+const vicini = getComuni()
+  .filter((c) => c.sigla === comune.sigla && c.slug !== comune.slug)
+  .sort((a, b) => dist(a) - dist(b))
+  .slice(0, 12);
+
+const b = comune.stats.benzina;
+const g = comune.stats.gasolio;
+const main = b ?? g ?? Object.values(comune.stats)[0]!;
+const mainFuel = fuelsOf(comune.stats)[0];
+const best = piuEconomici(impianti, mainFuel, 1)[0];
+const scarto = b ? Math.round((b.max - b.min) * 100) : 0;
+const uno = comune.count === 1;
+// Modalità a cui si riferiscono le cifre del comune: di norma self, servito se nessun impianto ha il self.
+const mdB = b ? modo('benzina', b) : 'self';
+const mdG = g ? modo('gasolio', g) : 'self';
+const mdMain = modo(mainFuel, main);
+const mdMainTxt = mdMain ? ' (' + mdMain + ')' : '';
+const ilCarburante = { benzina: 'la benzina', gasolio: 'il gasolio', gpl: 'il GPL', metano: 'il metano' }[mainFuel];
+
+const faq = [
+  best && {
+    question: `Dove costa meno ${ilCarburante} a ${comune.name}?`,
+    answer: `Oggi il prezzo più basso a ${comune.name} è ${prezzo(best.p[mainFuel])} ${FUELS[mainFuel].unit}${mdMainTxt}, al distributore ${nomeImpianto(best)} in ${best.addr}.${!uno ? ` La media del comune è ${prezzo(main.avg)} ${FUELS[mainFuel].unit}.` : ''}`,
+  },
+  g && b && {
+    question: `Quanto costa il gasolio a ${comune.name}?`,
+    answer: `Il gasolio ${mdG} costa ${uno ? '' : 'in media '}${prezzo(g.avg)} €/L a ${comune.name}${!uno ? `, con prezzi da ${prezzo(g.min)} a ${prezzo(g.max)} €/L` : ''}.`,
+  },
+  !uno && scarto > 0 && {
+    question: `Quanto cambiano i prezzi tra i distributori di ${comune.name}?`,
+    answer: `Sulla benzina ${mdB} ci sono ${scarto} centesimi al litro tra il distributore più economico e il più caro di ${comune.name}: su un pieno da 50 litri fanno ${euro((scarto * 50) / 100)} €.`,
+  },
+  {
+    question: `Ci sono distributori di GPL o metano a ${comune.name}?`,
+    answer: comune.stats.gpl || comune.stats.metano
+      ? `Sì: ${[comune.stats.gpl && `${comune.stats.gpl.n} ${comune.stats.gpl.n === 1 ? 'impianto vende' : 'impianti vendono'} GPL (da ${prezzo(comune.stats.gpl.min)} €/L)`, comune.stats.metano && `${comune.stats.metano.n} ${comune.stats.metano.n === 1 ? 'vende' : 'vendono'} metano (da ${prezzo(comune.stats.metano.min)} €/kg)`].filter(Boolean).join(' e ')}.`
+      : `Nessun distributore di ${comune.name} comunica oggi un prezzo per GPL o metano. Consulta la pagina della provincia di ${provincia.name} per trovare l'impianto più vicino.`,
+  },
+].filter(Boolean) as { question: string; answer: string }[];
+---
+
+<PrezziLayout
+  title={`Prezzi benzina ${comune.name} oggi: i più economici`}
+  description={`Prezzi carburanti a ${comune.name} (${comune.sigla}) oggi: ${b ? `benzina da ${prezzo(b.min)} €/L` : ''}${b && g ? ', ' : ''}${g ? `gasolio da ${prezzo(g.min)} €/L` : ''}. ${uno ? 'Un distributore' : `${comune.count} distributori`} a confronto.`}
+  h1={`Prezzi benzina e gasolio a ${comune.name}`}
+  lead={`${uno ? 'Un distributore' : `${numero(comune.count)} distributori`} a ${comune.name}, in provincia di ${provincia.name}: prezzi self e servito di oggi.`}
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: provincia.regione, href: `/prezzi-carburanti/regione/${provincia.regioneSlug}/` },
+    { label: provincia.name, href: `/prezzi-carburanti/provincia/${provincia.slug}/` },
+    { label: comune.name, href: `/prezzi-carburanti/comune/${comune.slug}/` },
+  ]}
+  noIndex={!comuneIndicizzabile(comune.count)}
+  count={comune.count}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>{uno ? `Prezzi a ${comune.name}` : `Prezzi medi a ${comune.name}`}</h2>
+      <PriceCards stats={comune.stats} reference={provincia.stats} referenceLabel={`media della provincia`} />
+      {b && g && (
+        <div class="pp-text" style="margin-top:1rem">
+          <p>
+            A {comune.name} la benzina {mdB} costa oggi {uno ? '' : 'in media '}{prezzo(b.avg)} €/L
+            {diffCent(b.avg, provincia.stats.benzina?.avg) && <>({diffCent(b.avg, provincia.stats.benzina?.avg)} sulla media della provincia di {provincia.name})</>}
+            {' '}e il gasolio {mdG} {prezzo(g.avg)} €/L.
+            {!uno && scarto > 0 && (
+              <> Scegliendo il distributore più economico invece del più caro si risparmiano {scarto} centesimi al litro, cioè {euro((scarto * 50) / 100)} € su 50 litri.</>
+            )}
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  {impianti.length > 6 && (
+    <section class="pp-section">
+      <div class="container">
+        <h2>I distributori più economici a {comune.name}</h2>
+        <TopStations stations={impianti} limit={3} />
+      </div>
+    </section>
+  )}
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>{uno ? `Il distributore di ${comune.name}` : `Tutti i distributori di ${comune.name}`}</h2>
+      <StationTable stations={impianti} sortBy={mainFuel} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Mappa dei distributori a {comune.name}</h2>
+      <LocalMap stations={impianti} label={`Mappa dei distributori di carburante a ${comune.name}`} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container" style="max-width:52rem">
+      <FAQ items={faq} />
+    </div>
+  </section>
+
+  {vicini.length > 0 && (
+    <section class="pp-section">
+      <div class="container">
+        <h2>Prezzi nei comuni vicini</h2>
+        <div class="pp-links">
+          {vicini.map((c) => (
+            <a href={`/prezzi-carburanti/comune/${c.slug}/`}>
+              {c.name}
+              <small>{prezzo((c.stats.benzina ?? c.stats.gasolio)?.avg)} €/L</small>
+            </a>
+          ))}
+        </div>
+        <p class="pp-note"><a href={`/prezzi-carburanti/provincia/${provincia.slug}/`}>Tutti i comuni della provincia di {provincia.name}</a></p>
+      </div>
+    </section>
+  )}
+</PrezziLayout>

@@ -1,0 +1,41 @@
+---
+// Riquadri "prezzo medio" per carburante, con scarto rispetto a un riferimento.
+import { FUELS, fuelsOf, prezzo, diffCent, modo, type FuelStats } from '../lib/fuel';
+
+interface Props {
+  stats: FuelStats;
+  /** Riferimento (di solito la media nazionale) per mostrare lo scarto */
+  reference?: FuelStats;
+  referenceLabel?: string;
+  /** Collega ogni riquadro alla pagina nazionale del carburante */
+  link?: boolean;
+}
+
+const { stats, reference, referenceLabel = 'media nazionale', link = false } = Astro.props;
+---
+
+<div class="pp-cards">
+  {fuelsOf(stats).map((k) => {
+    const s = stats[k]!;
+    // Lo scarto ha senso solo tra prezzi della stessa modalità.
+    const refStat = reference?.[k];
+    const ref = refStat && refStat.soloServito === s.soloServito ? refStat.avg : undefined;
+    const diff = ref != null ? diffCent(s.avg, ref) : null;
+    const Tag = link ? 'a' : 'div';
+    return (
+      <Tag class="pp-card" href={link ? `/${FUELS[k].slug}/` : undefined} style={`--pp-color:${FUELS[k].color}`}>
+        <span class="pp-card-label">{FUELS[k].label} {modo(k, s)}</span>
+        <span class="pp-card-price">{prezzo(s.avg)} <small>{FUELS[k].unit}</small></span>
+        {diff && (
+          <span class="pp-card-sub">
+            <span class={s.avg < ref! ? 'pp-down' : s.avg > ref! ? 'pp-up' : ''}>{diff}</span> rispetto alla {referenceLabel}
+          </span>
+        )}
+        {s.servito != null && s.servito > s.avg && (
+          <span class="pp-card-sub">Servito: <strong>{prezzo(s.servito)}</strong></span>
+        )}
+        <span class="pp-card-sub">da {prezzo(s.min)} a {prezzo(s.max)} · {s.n.toLocaleString('it-IT')} impianti</span>
+      </Tag>
+    );
+  })}
+</div>

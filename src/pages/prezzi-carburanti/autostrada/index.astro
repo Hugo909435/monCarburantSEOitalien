@@ -1,0 +1,92 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import { FUELS, FUEL_KEYS, getNazionale, getAutostrade, prezzo, diffCent, euro, numero } from '../../../lib/fuel';
+import { elencoAutostradeIndicizzabile } from '../../../config/indicizzazione.mjs';
+
+const { autostrada: confronto } = getNazionale();
+const autostrade = getAutostrade();
+const a = confronto.autostrada;
+const s = confronto.strada;
+const scartoServito = a.benzina?.servito != null && s.benzina?.servito != null ? a.benzina.servito - s.benzina.servito : null;
+---
+
+<PrezziLayout
+  title="Prezzi benzina in autostrada oggi: tutte le aree di servizio"
+  description={`Prezzi carburanti in autostrada oggi: benzina self ${prezzo(a.benzina?.avg)} €/L, servito ${prezzo(a.benzina?.servito)} €/L in media. ${numero(confronto.countAutostrada)} aree di servizio, autostrada per autostrada.`}
+  h1="Prezzi carburanti in autostrada"
+  lead="I prezzi di oggi nelle aree di servizio, autostrada per autostrada, e il confronto con la rete stradale."
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Autostrade', href: '/prezzi-carburanti/autostrada/' },
+  ]}
+  noIndex={!elencoAutostradeIndicizzabile}
+  count={confronto.countAutostrada}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Autostrada e rete stradale a confronto</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Carburante</th>
+              <th scope="col" class="num">Autostrada, self</th>
+              <th scope="col" class="num">Strada, self</th>
+              <th scope="col" class="num">Autostrada, servito</th>
+              <th scope="col" class="num">Strada, servito</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FUEL_KEYS.filter((k) => a[k] && s[k]).map((k) => (
+              <tr>
+                <td>{FUELS[k].label}</td>
+                <td class="num">{prezzo(a[k]!.avg)}</td>
+                <td class="num">{prezzo(s[k]!.avg)}</td>
+                <td class="num">{prezzo(a[k]!.servito)}</td>
+                <td class="num">{prezzo(s[k]!.servito)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="pp-text" style="margin-top:1rem">
+        <p>
+          In autostrada la benzina self costa oggi in media {prezzo(a.benzina?.avg)} €/L, contro {prezzo(s.benzina?.avg)} €/L
+          sulla rete stradale ({diffCent(a.benzina?.avg, s.benzina?.avg)}).
+          {scartoServito != null && scartoServito > 0 && (
+            <> La differenza vera è sul servito: {(scartoServito * 100).toLocaleString('it-IT', { maximumFractionDigits: 1 })} centesimi al litro in più, cioè {euro(scartoServito * 50)} € su un pieno da 50 litri.</>
+          )}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi per autostrada</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Autostrada</th>
+              <th scope="col">Nome e percorso</th>
+              <th scope="col" class="num">Aree di servizio</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {autostrade.map((au) => (
+              <tr>
+                <td><a href={`/prezzi-carburanti/autostrada/${au.slug}/`}>{au.code}</a></td>
+                <td>{[au.nome, au.percorso].filter(Boolean).join(', ')}</td>
+                <td class="num">{au.count}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(au.stats[k]?.avg)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="pp-note">Benzina e gasolio: prezzi medi self service, in €/L. GPL in €/L, metano in €/kg. La sigla dell'autostrada è ricavata dall'indirizzo comunicato dal gestore.</p>
+    </div>
+  </section>
+</PrezziLayout>

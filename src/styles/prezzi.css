@@ -1,0 +1,416 @@
+/* Stili condivisi dalle pagine dei prezzi (hub, regione, provincia, comune,
+   marchio, autostrada, carburante) e dai blocchi della home. */
+
+/* ── Intestazione di pagina ── */
+.pp-hero {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #1a4a68 100%);
+  color: #fff;
+  padding: 1.5rem 0 2.25rem;
+}
+.pp-hero .breadcrumb,
+.pp-hero .breadcrumb a,
+.pp-hero .breadcrumb span {
+  color: rgba(255, 255, 255, 0.75);
+}
+.pp-hero .breadcrumb a:hover {
+  color: #fff;
+}
+.pp-hero .breadcrumb [aria-current] {
+  color: #fff !important;
+}
+.pp-hero h1 {
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #fff;
+  margin: 1rem 0 0.6rem;
+}
+.pp-hero .pp-lead {
+  max-width: 62ch;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1.05rem;
+}
+.pp-hero .pp-meta {
+  margin: 0.9rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+.pp-hero .pp-meta a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* ── Sezioni ── */
+.pp-section {
+  padding: 2.25rem 0 0;
+}
+.pp-section:last-of-type {
+  padding-bottom: 3rem;
+}
+.pp-section.pp-alt {
+  background: #f8fafc;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 2.25rem 0;
+  margin-top: 2.25rem;
+}
+.pp-section h2,
+.pp-h2 {
+  font-size: clamp(1.25rem, 2.6vw, 1.6rem);
+  margin: 0 0 1rem;
+}
+.pp-section h3 {
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+}
+.pp-text p {
+  max-width: 72ch;
+  margin: 0 0 0.9rem;
+  color: #374151;
+}
+.pp-text a,
+.pp-note a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pp-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Riquadri prezzo medio ── */
+.pp-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+}
+.pp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--pp-color, var(--color-primary));
+  border-radius: 12px;
+  color: inherit;
+}
+a.pp-card {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+a.pp-card:hover {
+  color: inherit;
+  box-shadow: 0 6px 20px rgba(15, 45, 63, 0.12);
+  transform: translateY(-2px);
+}
+.pp-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+}
+.pp-card-price {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+.pp-card-price small {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.pp-card-sub {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.pp-card-sub strong {
+  color: #374151;
+}
+.pp-down {
+  color: #15803d;
+  font-weight: 600;
+}
+.pp-up {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* ── Griglie di link ── */
+.pp-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 0.5rem;
+}
+.pp-links a {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.pp-links a:hover {
+  border-color: var(--color-accent);
+}
+.pp-links a small {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tabelle ── */
+.table-wrapper {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.pp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.pp-table th {
+  text-align: left;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.pp-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: top;
+}
+.pp-table tr:last-child td {
+  border-bottom: 0;
+}
+.pp-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pp-table td a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border);
+  text-underline-offset: 3px;
+}
+.pp-table td.is-min {
+  color: #15803d;
+  font-weight: 700;
+}
+.pp-st-name {
+  display: block;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.pp-st-addr {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.pp-st-addr a {
+  font-weight: 400 !important;
+}
+.pp-servito {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+/* Ordinamento della tabella impianti */
+.pp-sort {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.pp-sort button {
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.pp-sort button[aria-pressed='true'] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+.pp-more {
+  margin-top: 0.75rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+.pp-more:hover {
+  border-color: var(--color-accent);
+}
+
+@media (max-width: 640px) {
+  .pp-table.pp-stations thead {
+    display: none;
+  }
+  .pp-table.pp-stations tr {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.35rem 0;
+  }
+  .pp-table.pp-stations tr[hidden] {
+    display: none;
+  }
+  .pp-table.pp-stations td {
+    border-bottom: 0;
+    padding: 0.3rem 0.85rem;
+  }
+  .pp-table.pp-stations td:first-child {
+    grid-column: 1 / -1;
+  }
+  .pp-table.pp-stations td.num {
+    text-align: left;
+  }
+  .pp-table.pp-stations td.num:empty,
+  .pp-table.pp-stations td.num.is-empty {
+    display: none;
+  }
+  .pp-table.pp-stations td.num::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* ── Classifiche (top) ── */
+.pp-tops {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+.pp-top {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+.pp-top ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pp-top li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+.pp-top li:last-child {
+  border-bottom: 0;
+}
+.pp-top li small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.pp-top li strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary);
+}
+
+/* ── Fatti in evidenza ── */
+.pp-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.pp-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: inherit;
+}
+a.pp-fact:hover {
+  color: inherit;
+  border-color: var(--color-accent);
+}
+.pp-fact-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+.pp-fact-value {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+.pp-fact-note {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Mini mappa delle pagine locali ── */
+.pp-map {
+  height: 380px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8eef2;
+}
+
+/* ── Pagine di testo (chi siamo, note legali...) ── */
+.pp-page {
+  max-width: 46rem;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+.pp-todo {
+  padding: 0.75rem 1rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  color: #9a3412;
+  font-size: 0.9rem;
+}

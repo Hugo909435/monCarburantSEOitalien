@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../config/site';
+---
+
+<BaseLayout title="Contatti" description={`Scrivi a ${SITE.name} per segnalare un prezzo errato, fare una domanda o proporre una collaborazione.`}>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Contatti', href: Astro.url.pathname }]} />
+      <h1>Contatti</h1>
+    </div>
+  </div>
+  <div class="container pp-page pp-text">
+    <p>Hai notato un prezzo sbagliato, un distributore mancante o vuoi proporci una collaborazione? Scrivici.</p>
+    <p>E-mail: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a></p>
+    <h2>Segnalare un prezzo errato</h2>
+    <p>
+      I prezzi sono quelli comunicati dai gestori al Ministero. Se un prezzo non corrisponde a quello esposto alla pompa,
+      indicaci il comune, l'indirizzo del distributore e la data: verificheremo la segnalazione. La correzione del dato
+      alla fonte spetta al gestore, tramite il portale dell'Osservaprezzi.
+    </p>
+  </div>
+</BaseLayout>

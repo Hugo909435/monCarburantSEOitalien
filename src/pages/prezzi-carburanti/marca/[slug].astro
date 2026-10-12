@@ -1,0 +1,105 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import PriceCards from '../../../components/PriceCards.astro';
+import TopStations from '../../../components/TopStations.astro';
+import {
+  FUELS, FUEL_KEYS, getNazionale, getMarche, getMarcaDetail, fuelsOf,
+  prezzo, diffCent, numero, type Marca,
+} from '../../../lib/fuel';
+import { marcheIndicizzabili } from '../../../config/indicizzazione.mjs';
+
+export function getStaticPaths() {
+  return getMarche()
+    .filter((m) => m.slug !== 'altri-marchi')
+    .map((marca) => ({ params: { slug: marca.slug }, props: { marca } }));
+}
+
+interface Props { marca: Marca }
+const { marca } = Astro.props;
+
+const naz = getNazionale().stats;
+const detail = getMarcaDetail(marca.slug);
+const altre = getMarche().filter((m) => m.slug !== marca.slug && m.slug !== 'altri-marchi');
+const bianche = marca.slug === 'pompe-bianche';
+const presso = bianche ? 'nelle pompe bianche' : `nei distributori ${marca.name}`;
+const b = marca.stats.benzina;
+const g = marca.stats.gasolio;
+---
+
+<PrezziLayout
+  title={bianche ? 'Pompe bianche: prezzi benzina e gasolio oggi' : `Prezzi ${marca.name} oggi: benzina e gasolio`}
+  description={`Prezzi ${presso} oggi: benzina ${prezzo(b?.avg)} €/L, gasolio ${prezzo(g?.avg)} €/L in media (self). ${numero(marca.count)} impianti, i più economici e il confronto per regione.`}
+  h1={bianche ? 'Prezzi nelle pompe bianche' : `Prezzi carburanti ${marca.name}`}
+  lead={`Prezzi medi di oggi ${presso}, impianti più economici e confronto regione per regione.`}
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Marchi', href: '/prezzi-carburanti/marca/' },
+    { label: marca.name, href: `/prezzi-carburanti/marca/${marca.slug}/` },
+  ]}
+  noIndex={!marcheIndicizzabili}
+  count={marca.count}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi medi {presso}</h2>
+      <PriceCards stats={marca.stats} reference={naz} />
+      {b && g && (
+        <div class="pp-text" style="margin-top:1rem">
+          <p>
+            Oggi {presso} la benzina self costa in media {prezzo(b.avg)} €/L
+            {diffCent(b.avg, naz.benzina?.avg) && <>({diffCent(b.avg, naz.benzina?.avg)} rispetto alla media di tutti i distributori)</>}
+            {' '}e il gasolio {prezzo(g.avg)} €/L {diffCent(g.avg, naz.gasolio?.avg) && <>({diffCent(g.avg, naz.gasolio?.avg)})</>}.
+            Le medie sono calcolate su {numero(marca.count)} impianti.
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Gli impianti più economici</h2>
+      <TopStations lists={detail.cheapest} limit={8} fuels={fuelsOf(marca.stats)} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi {presso} per regione</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Regione</th>
+              <th scope="col" class="num">Impianti</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {detail.perRegione.map((r) => (
+              <tr>
+                <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+                <td class="num">{numero(r.count)}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(r.stats[k]?.avg)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Confronta con altri marchi</h2>
+      <div class="pp-links">
+        {altre.map((m) => (
+          <a href={`/prezzi-carburanti/marca/${m.slug}/`}>
+            {m.name}
+            <small>{prezzo(m.stats.benzina?.avg)} €/L</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</PrezziLayout>

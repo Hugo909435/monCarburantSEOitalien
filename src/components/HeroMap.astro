@@ -1,0 +1,1258 @@
+---
+// Hero della home: ricerca + mappa interattiva di tutti gli impianti.
+// La mappa legge /data/impianti.json (generato da scripts/fetch-fuel-data.js)
+// e viene caricata in differita per non pesare sul primo rendering.
+import { getMeta, getNazionale, dataLunga, numero } from '../lib/fuel';
+import { SITE } from '../config/site';
+
+const meta = getMeta();
+const nazionale = getNazionale().stats;
+
+interface Props {
+  /** Titolo H1; sulle pagine interne la mappa può essere riusata con un altro titolo */
+  title?: string;
+}
+const { title } = Astro.props;
+---
+
+<section class="hm-section" aria-labelledby="hm-title">
+
+  <!-- Intestazione hero con barra di ricerca -->
+  <div class="hm-top">
+    <div class="container">
+      <p class="hm-eyebrow">Confronto prezzi carburanti · Italia</p>
+      <h1 id="hm-title" class="hm-title">
+        {title ?? <>Prezzi benzina e gasolio oggi:<br /><span class="hm-accent">trova il distributore più economico</span></>}
+      </h1>
+
+      <p class="hm-freshness">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Prezzi aggiornati ogni giorno &middot; Ultimo aggiornamento: <time datetime={meta.lastUpdate}>{dataLunga(meta.lastUpdate)}</time>
+      </p>
+
+      <p class="hm-subtitle">
+        {numero(meta.totalStations)} distributori in {numero(meta.totalComuni)} comuni &middot; Dati ufficiali del Ministero (MIMIT)
+      </p>
+
+      <form id="hm-form" class="hm-form" role="search" aria-label="Ricerca per comune o CAP" novalidate>
+        <div class="hm-input-wrap">
+          <svg class="hm-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            id="hm-input"
+            type="search"
+            class="hm-input"
+            placeholder="Il tuo comune o CAP (es. Bologna, 40121...)"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            aria-label="Comune o CAP"
+          />
+        </div>
+        <button type="submit" class="hm-btn">
+          Vedi i distributori
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+
+      <button type="button" id="hm-geo-btn" class="hm-geo-btn">
+        <svg class="hm-geo-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+        </svg>
+        <span id="hm-geo-btn-label">Trova un distributore vicino a me</span>
+      </button>
+
+      <div class="hm-suggestions" id="hm-suggestions" role="group" aria-label="Città più cercate">
+        <span class="hm-suggestions-label">Ricerche frequenti:</span>
+        {['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Genova', 'Bologna', 'Firenze'].map((c) => (
+          <button type="button" class="hm-chip" data-city={c}>{c}</button>
+        ))}
+      </div>
+
+      <p id="hm-status" class="hm-status" role="status" aria-live="polite" aria-atomic="true"></p>
+    </div>
+  </div>
+
+  <!-- Mappa Leaflet + elenco dei distributori -->
+  <div class="hm-map-wrap" id="hm-map-wrap">
+    <div class="container">
+      <div class="hm-map-layout">
+        <div
+          id="hm-map"
+          class="hm-map"
+          data-nat={JSON.stringify({
+            benzina: nazionale.benzina?.avg ?? 0,
+            gasolio: nazionale.gasolio?.avg ?? 0,
+            gpl: nazionale.gpl?.avg ?? 0,
+            metano: nazionale.metano?.avg ?? 0,
+          })}
+          role="application"
+          aria-label={`Mappa interattiva dei distributori di carburante in Italia, ${SITE.name}`}
+        >
+          <div class="hm-loading" id="hm-loading">
+            <svg class="hm-spinner" viewBox="0 0 50 50" aria-hidden="true">
+              <circle cx="25" cy="25" r="20" fill="none" stroke-width="5"/>
+            </svg>
+            <span>Caricamento dei distributori...</span>
+          </div>
+        </div>
+
+        <aside class="hm-list-panel" aria-label="Elenco dei distributori trovati">
+          <div class="hm-fuel-filters" id="hm-fuel-filters" role="group" aria-label="Filtra per carburante">
+            <button type="button" class="hm-fuel-btn is-active" data-fuel="benzina">Benzina</button>
+            <button type="button" class="hm-fuel-btn" data-fuel="gasolio">Gasolio</button>
+            <button type="button" class="hm-fuel-btn" data-fuel="gpl">GPL</button>
+            <button type="button" class="hm-fuel-btn" data-fuel="metano">Metano</button>
+          </div>
+          <p class="hm-list-count" id="hm-list-count"></p>
+          <ul class="hm-list" id="hm-list">
+            <li class="hm-list-empty">Cerca un comune, un CAP, oppure clicca su «Trova un distributore vicino a me» per vedere qui l'elenco dei distributori.</li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legenda dei colori -->
+  <div class="hm-legend">
+    <div class="container">
+      <ul class="hm-legend-list">
+        <li><span class="hm-dot hm-dot-cheap"></span>Benzina sotto la media nazionale</li>
+        <li><span class="hm-dot hm-dot-exp"></span>Benzina sopra la media nazionale</li>
+        <li><span class="hm-dot hm-dot-na"></span>Benzina non venduta o prezzo non comunicato</li>
+        <li class="hm-legend-tip">Clicca su un punto per vedere tutti i prezzi (self service, o servito se l'impianto non ha il self)</li>
+      </ul>
+    </div>
+  </div>
+
+</section>
+
+<style>
+  .hm-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── En-tête hero ── */
+  .hm-top {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #1a4a68 100%);
+    padding: 3rem 0 2.25rem;
+    color: #fff;
+  }
+
+  /* Sur petit écran, la carte (l'objectif de la recherche) doit rester
+     proche du formulaire : on resserre les espacements du hero pour ne pas
+     l'enfoncer plus bas qu'elle ne l'est déjà. */
+  @media (max-width: 640px) {
+    .hm-top { padding: 1.75rem 0 1.5rem; }
+    .hm-title { margin-bottom: 0.625rem; }
+    .hm-subtitle { margin-bottom: 1.125rem; }
+    .hm-freshness { margin-bottom: 0.625rem; }
+    .hm-suggestions { margin-top: 0.625rem; }
+    .hm-geo-btn { margin-top: 0.625rem; }
+  }
+
+  .hm-eyebrow {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-accent);
+    margin: 0 0 0.75rem;
+  }
+
+  .hm-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 4.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: #fff;
+    margin: 0 0 0.875rem;
+  }
+
+  .hm-accent { color: var(--color-accent); }
+
+  .hm-subtitle {
+    font-size: 0.9375rem;
+    color: #94a3b8;
+    margin: 0 0 1.75rem;
+    line-height: 1.6;
+  }
+
+  /* ── Formulaire de recherche ── */
+  .hm-form {
+    display: flex;
+    gap: 0.625rem;
+    max-width: 700px;
+  }
+
+  @media (max-width: 520px) {
+    .hm-form { flex-direction: column; }
+  }
+
+  .hm-input-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hm-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+    flex-shrink: 0;
+  }
+
+  .hm-input {
+    width: 100%;
+    padding: 0.875rem 1rem 0.875rem 3rem;
+    border: 2px solid rgba(255 255 255 / 0.18);
+    border-radius: 0.625rem;
+    background: rgba(255 255 255 / 0.09);
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+  }
+
+  .hm-input::placeholder { color: #64748b; }
+  .hm-input:focus {
+    border-color: var(--color-accent);
+    background: rgba(255 255 255 / 0.13);
+  }
+  .hm-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  .hm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: var(--color-accent);
+    color: #fff;
+    border: none;
+    border-radius: 0.625rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.15s;
+    box-shadow: 0 4px 14px rgba(232 119 34 / 0.4);
+    flex-shrink: 0;
+  }
+
+  .hm-btn:hover { background: #c05a17; transform: translateY(-1px); }
+  .hm-btn:active { transform: none; }
+
+  /* ── Villes populaires ── */
+  .hm-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+    max-width: 700px;
+  }
+
+  .hm-suggestions-label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-right: 0.125rem;
+  }
+
+  .hm-chip {
+    padding: 0.3rem 0.75rem;
+    border: 1.5px solid rgba(255 255 255 / 0.2);
+    border-radius: 999px;
+    background: rgba(255 255 255 / 0.07);
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+  }
+  .hm-chip:hover {
+    background: rgba(232 119 34 / 0.16);
+    border-color: var(--color-accent);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+  .hm-chip:active { transform: none; }
+
+  /* En dessous de 640px, 8 chips + le libellé passent sur 3-4 lignes en
+     mode "wrap" et repoussent d'autant la carte plus bas : on les fait
+     défiler horizontalement sur une seule ligne à la place. */
+  @media (max-width: 640px) {
+    .hm-suggestions {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .hm-suggestions::-webkit-scrollbar { display: none; }
+    .hm-suggestions-label, .hm-chip { flex-shrink: 0; }
+  }
+
+  .hm-status {
+    min-height: 1.4rem;
+    margin: 0.625rem 0 0;
+    font-size: 0.875rem;
+    color: #94a3b8;
+    transition: color 0.2s;
+  }
+  .hm-status.is-error { color: #fca5a5; }
+  .hm-status.is-ok { color: #86efac; }
+
+  /* ── Fraîcheur des prix ── */
+  .hm-freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.875rem;
+    padding: 0.3rem 0.75rem;
+    background: rgba(34 197 94 / 0.15);
+    border: 1px solid rgba(74 222 128 / 0.35);
+    border-radius: 999px;
+    color: #86efac;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .hm-freshness time { color: #fff; font-weight: 700; }
+
+  /* ── Bouton géolocalisation ── */
+  .hm-geo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+    padding: 0.65rem 1.25rem;
+    background: rgba(255 255 255 / 0.1);
+    border: 2px solid var(--color-accent);
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .hm-geo-btn:hover { background: var(--color-accent); transform: translateY(-1px); }
+  .hm-geo-btn:active { transform: none; }
+  .hm-geo-btn:disabled { cursor: wait; opacity: 0.7; }
+
+  .hm-geo-icon { flex-shrink: 0; }
+  .hm-geo-btn.is-loading .hm-geo-icon { animation: hm-spin 0.9s linear infinite; }
+
+  /* ── Carte ── */
+  .hm-map-wrap {
+    background: #fff;
+    padding: 2rem 0;
+    /* Décale l'ancre de scroll sous le header sticky (4rem) pour que la
+       carte ne se retrouve pas collée/masquée sous lui après un scroll. */
+    scroll-margin-top: 4.5rem;
+  }
+
+  .hm-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .hm-map-layout { grid-template-columns: 1fr; }
+  }
+
+  .hm-map {
+    position: relative;
+    width: 100%;
+    height: 520px;
+    background: #e8f0f5;
+    z-index: 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0 0 0 / 0.18);
+  }
+
+  @media (max-width: 640px) { .hm-map { height: 400px; border-radius: 0.75rem; } }
+
+  /* ── Panneau liste des stations ── */
+  .hm-list-panel {
+    display: flex;
+    flex-direction: column;
+    height: 520px;
+    background: #f8fafc;
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0 0 0 / 0.1);
+  }
+
+  @media (max-width: 900px) { .hm-list-panel { height: 420px; } }
+  @media (max-width: 640px) { .hm-list-panel { height: 380px; border-radius: 0.75rem; } }
+
+  .hm-fuel-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    padding: 0.875rem 0.875rem 0.75rem;
+    background: #fff;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .hm-fuel-btn {
+    padding: 0.32rem 0.7rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 999px;
+    background: #fff;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+  }
+  .hm-fuel-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+  .hm-fuel-btn.is-active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(232 119 34 / 0.35);
+  }
+
+  .hm-list-count {
+    margin: 0;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    background: #fff;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+  }
+  .hm-list-count:empty { display: none; }
+
+  .hm-list {
+    list-style: none;
+    margin: 0;
+    padding: 0.625rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    scrollbar-width: thin;
+  }
+  .hm-list::-webkit-scrollbar { width: 7px; }
+  .hm-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  .hm-list::-webkit-scrollbar-track { background: transparent; }
+
+  /* Le contenu ci-dessous est injecté dynamiquement (innerHTML) par le
+     script, donc sans l'attribut de scope Astro : les sélecteurs doivent
+     rester globaux pour s'appliquer. */
+  :global(.hm-list-empty) {
+    padding: 1.5rem 0.75rem;
+    color: #64748b;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  :global(.hm-list-item) {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.625rem;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(15 23 42 / 0.04);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  }
+  :global(.hm-list-item:hover), :global(.hm-list-item:focus-visible) {
+    border-color: var(--color-accent);
+    box-shadow: 0 6px 16px rgba(232 119 34 / 0.16);
+    transform: translateY(-1px);
+  }
+  :global(.hm-list-item.is-best) {
+    border-left-color: #16a34a;
+    background: #f4fdf6;
+    margin-top: 0.4rem;
+  }
+
+  :global(.hm-item-best-tag) {
+    position: absolute;
+    top: -0.5rem;
+    left: 0.75rem;
+    background: #16a34a;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgba(0 0 0 / 0.2);
+  }
+
+  :global(.hm-item-logo) {
+    width: 36px;
+    height: 36px;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    object-fit: contain;
+    padding: 3px;
+  }
+  :global(.hm-item-logo-fallback) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--color-primary);
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  :global(.hm-item-main) {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+  }
+
+  :global(.hm-item-brand) {
+    font-size: 0.6875rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.hm-item-city) {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f2e44;
+    text-transform: capitalize;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.hm-item-addr) {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.hm-item-dist) {
+    display: inline-block;
+    margin-top: 0.15rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+    width: fit-content;
+  }
+
+  :global(.hm-item-price-wrap) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    line-height: 1.1;
+  }
+
+  :global(.hm-item-price) {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f2e44;
+    white-space: nowrap;
+  }
+  :global(.hm-list-item.is-best .hm-item-price) { color: #16a34a; }
+
+  :global(.hm-item-unit) {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  .hm-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: #64748b;
+    font-size: 0.9375rem;
+    background: #e8f0f5;
+    z-index: 10;
+  }
+
+  .hm-spinner {
+    width: 44px;
+    height: 44px;
+    animation: hm-spin 0.9s linear infinite;
+  }
+
+  .hm-spinner circle {
+    stroke: var(--color-accent);
+    stroke-linecap: round;
+    stroke-dasharray: 75 100;
+  }
+
+  @keyframes hm-spin { to { transform: rotate(360deg); } }
+
+  /* ── Légende ── */
+  .hm-legend {
+    background: #f8fafc;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.625rem 0;
+  }
+
+  .hm-legend-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 1.25rem;
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  .hm-legend-list li { display: flex; align-items: center; gap: 0.375rem; }
+
+  .hm-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0 0 0 / 0.18);
+    flex-shrink: 0;
+  }
+  .hm-dot-cheap { background: #16a34a; }
+  .hm-dot-exp   { background: #ea580c; }
+  .hm-dot-na    { background: #94a3b8; }
+
+  .hm-legend-tip { margin-left: auto; font-style: italic; }
+  @media (max-width: 640px) { .hm-legend-tip { display: none; } }
+
+  /* ── Pins Leaflet ── */
+  :global(.fuel-pin) {
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0 0 0 / 0.25);
+    transition: transform 0.1s;
+  }
+  :global(.fuel-pin:hover) { transform: scale(1.4); }
+  :global(.fuel-pin-cheap) { background: #16a34a; }
+  :global(.fuel-pin-exp)   { background: #ea580c; }
+  :global(.fuel-pin-na)    { background: #94a3b8; }
+
+  /* Pin avec logo de la marque : pastille blanche, anneau coloré selon le prix */
+  :global(.fuel-pin-logo) {
+    width: 26px; height: 26px;
+    background: #fff;
+    border-width: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  /* !important nécessaire : le CSS de Leaflet (.leaflet-marker-pane img)
+     force width:auto avec une spécificité supérieure à .fuel-pin-logo img,
+     ce qui fait déborder les logos très larges (wordmarks type Shell,
+     Auchan) hors de la bulle en gardant leur ratio d'origine. */
+  :global(.fuel-pin-logo img) {
+    width: 17px !important; height: 17px !important;
+    object-fit: contain;
+  }
+  :global(.fuel-pin-logo.fuel-pin-cheap) { background: #fff; border-color: #16a34a; }
+  :global(.fuel-pin-logo.fuel-pin-exp)   { background: #fff; border-color: #ea580c; }
+  :global(.fuel-pin-logo.fuel-pin-na)    { background: #fff; border-color: #94a3b8; }
+
+  /* ── Pin "vous êtes ici" ── */
+  :global(.hm-user-pin) {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #2563eb;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0 0 0 / 0.25), 0 0 0 8px rgba(37 99 235 / 0.25);
+  }
+
+  /* ── Popup Leaflet ── */
+  :global(.hm-popup .leaflet-popup-content-wrapper) {
+    border-radius: 0.75rem;
+    box-shadow: 0 6px 24px rgba(0 0 0 / 0.14);
+    padding: 0;
+    overflow: hidden;
+  }
+  :global(.hm-popup .leaflet-popup-content) {
+    margin: 0;
+    min-width: 210px;
+    max-width: 260px;
+  }
+  :global(.hm-popup .leaflet-popup-tip-container) { margin-top: -1px; }
+
+  :global(.popup-body) { padding: 0.875rem 1rem 0.75rem; }
+
+  :global(.popup-brand) {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+    margin-bottom: 0.1rem;
+  }
+  :global(.popup-city) {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #0f2e44;
+    margin-bottom: 0.2rem;
+    text-transform: capitalize;
+  }
+  :global(.popup-addr) {
+    font-size: 0.775rem;
+    color: #64748b;
+    margin: 0 0 0.625rem;
+    line-height: 1.4;
+  }
+  :global(.popup-prices) {
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    width: 100%;
+    margin-bottom: 0;
+  }
+  :global(.popup-prices td) { padding: 0.1rem 0.4rem 0.1rem 0; color: #374151; }
+  :global(.popup-prices td:last-child) { font-weight: 700; text-align: right; color: #0f2e44; }
+
+  :global(.popup-footer) {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.7rem 0.85rem 0.85rem;
+    background: #f8fafc;
+    border-top: 1px solid #eef1f5;
+  }
+  :global(.popup-footer > a) { flex: 1; }
+
+  :global(.popup-cta) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: #fff !important;
+    text-decoration: none !important;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: background 0.15s, transform 0.1s;
+  }
+  :global(.popup-cta:hover) { background: #c05a17; color: #fff !important; }
+  :global(.popup-cta:active) { transform: scale(0.96); }
+
+  :global(.popup-route) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    background: #2563eb;
+    color: #fff !important;
+    text-decoration: none !important;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.5rem;
+    transition: background 0.15s, transform 0.1s;
+  }
+  :global(.popup-route:hover) { background: #1d4ed8; color: #fff !important; }
+  :global(.popup-route:active) { transform: scale(0.96); }
+</style>
+
+<script>
+  import { escapeHtml } from '../utils/escape-html';
+
+  const mapEl  = document.getElementById('hm-map') as HTMLElement | null;
+  const mapWrapEl = document.getElementById('hm-map-wrap') as HTMLElement | null;
+  const formEl = document.getElementById('hm-form') as HTMLFormElement | null;
+  const inputEl  = document.getElementById('hm-input') as HTMLInputElement | null;
+  const statusEl = document.getElementById('hm-status') as HTMLElement | null;
+  const loadingEl = document.getElementById('hm-loading') as HTMLElement | null;
+  const geoBtnEl = document.getElementById('hm-geo-btn') as HTMLButtonElement | null;
+  const geoBtnLabelEl = document.getElementById('hm-geo-btn-label') as HTMLElement | null;
+  const listEl = document.getElementById('hm-list') as HTMLElement | null;
+  const listCountEl = document.getElementById('hm-list-count') as HTMLElement | null;
+  const fuelFiltersEl = document.getElementById('hm-fuel-filters') as HTMLElement | null;
+  const suggestionsEl = document.getElementById('hm-suggestions') as HTMLElement | null;
+
+  if (!mapEl) throw new Error('hm-map non trovato');
+
+  const nat: Record<string, number> = JSON.parse(mapEl.dataset.nat || '{}');
+
+  const GEO_LABEL = 'Trova un distributore vicino a me';
+  const EMPTY_LIST = '<li class="hm-list-empty">Cerca un comune, un CAP, oppure clicca su «Trova un distributore vicino a me» per vedere qui l\'elenco dei distributori.</li>';
+
+  function loadCss(href: string): Promise<void> {
+    return new Promise(resolve => {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet'; l.href = href;
+      l.onload = () => resolve(); l.onerror = () => resolve();
+      document.head.appendChild(l);
+    });
+  }
+
+  function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Impossibile caricare: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  // Stessa regola di scripts/geo-italia.js (toSlug): gli slug dei comuni
+  // calcolati qui devono coincidere con quelli delle pagine generate.
+  const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
+  function norm(s: string): string {
+    return s.toLowerCase().normalize('NFD')
+      .replace(DIACRITICS, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function setStatus(msg: string, type: 'ok' | 'error' | '' = '') {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'hm-status' + (type ? ' is-' + type : '');
+  }
+
+  // Su mobile la mappa è sotto il modulo e fuori dallo schermo: senza questo
+  // scroll l'utente non vedrebbe il risultato della ricerca.
+  function scrollToMap() {
+    if (!mapWrapEl) return;
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    mapWrapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  type Station = {
+    id: string;
+    lat: number; lng: number;
+    comune: string; slug: string; nome: string;
+    sigla: string; addr: string; cap: string;
+    marca: string;
+    aut: boolean;
+    prices: Record<string, number>;
+  };
+
+  const FUEL_LABELS: Record<string, string> = { benzina: 'Benzina', gasolio: 'Gasolio', gpl: 'GPL', metano: 'Metano' };
+  const FUEL_UNITS: Record<string, string> = { benzina: '€/L', gasolio: '€/L', gpl: '€/L', metano: '€/kg' };
+
+  const fmt = (p: number) => p.toFixed(3).replace('.', ',');
+  const plural = (n: number, one: string, many: string) => `${n.toLocaleString('it-IT')} ${n === 1 ? one : many}`;
+
+  function buildPopup(s: Station): string {
+    const rows = Object.entries(FUEL_LABELS)
+      .filter(([k]) => s.prices[k] != null)
+      .map(([k, lbl]) => `<tr><td>${lbl}</td><td>${fmt(s.prices[k])} ${FUEL_UNITS[k]}</td></tr>`)
+      .join('');
+
+    const noPrice = `<p style="font-size:.78rem;color:#64748b;margin:0 0 .5rem">Prezzi non comunicati</p>`;
+    const routeUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
+
+    return (
+      `<div class="popup-body">` +
+      `<span class="popup-brand">${escapeHtml(s.marca)}${s.aut ? ' · autostrada' : ''}</span>` +
+      `<span class="popup-city">${escapeHtml(s.comune)} (${escapeHtml(s.sigla)})</span>` +
+      `<p class="popup-addr">${escapeHtml(s.addr)}${s.cap ? ' &middot; ' + escapeHtml(s.cap) : ''}</p>` +
+      (rows ? `<table class="popup-prices">${rows}</table>` : noPrice) +
+      `</div>` +
+      `<div class="popup-footer">` +
+      `<a href="${routeUrl}" class="popup-route" target="_blank" rel="noopener noreferrer">Indicazioni</a>` +
+      `<a href="/prezzi-carburanti/comune/${s.slug}/" class="popup-cta">Distributori a ${escapeHtml(s.comune)} &rarr;</a>` +
+      `</div>`
+    );
+  }
+
+  let stations: Station[] = [];
+  let leafletMap: any = null;
+  let mapReady = false;
+  let mapInitStarted = false;
+  let pendingSearch: string | null = null;
+  let pendingGeo: { lat: number; lng: number } | null = null;
+  let userMarker: any = null;
+
+  const LIST_MAX = 40;
+  let selectedFuel = 'benzina';
+  let lastResults: { s: Station; dist?: number }[] = [];
+  let popupLayer: any = null;
+
+  function flyToStation(s: Station) {
+    if (!leafletMap) return;
+    const L = (window as any).L;
+    leafletMap.flyTo([s.lat, s.lng], 15, { animate: true, duration: 0.75 });
+    if (popupLayer) leafletMap.closePopup(popupLayer);
+    popupLayer = L.popup({ className: 'hm-popup', maxWidth: 270 })
+      .setLatLng([s.lat, s.lng])
+      .setContent(buildPopup(s))
+      .openOn(leafletMap);
+  }
+
+  function renderList() {
+    if (!listEl) return;
+
+    if (lastResults.length === 0) {
+      listEl.innerHTML = EMPTY_LIST;
+      if (listCountEl) listCountEl.textContent = '';
+      return;
+    }
+
+    const withPrice = lastResults.filter(r => r.s.prices[selectedFuel] != null);
+    const sorted = withPrice.slice().sort((a, b) => a.s.prices[selectedFuel] - b.s.prices[selectedFuel]);
+    const shown = sorted.slice(0, LIST_MAX);
+
+    if (listCountEl) {
+      const label = FUEL_LABELS[selectedFuel] || selectedFuel;
+      listCountEl.textContent = withPrice.length === 0
+        ? `Nessun distributore con un prezzo ${label} in questa selezione.`
+        : `${plural(withPrice.length, 'distributore', 'distributori')} con prezzo ${label}` +
+          (withPrice.length > shown.length ? ` (${shown.length} mostrati, dal più economico)` : ' (dal più economico)');
+    }
+
+    listEl.innerHTML = shown.map(({ s, dist }, i) => {
+      const [intPart, decPart] = fmt(s.prices[selectedFuel]).split(',');
+      return `<li>
+        <button type="button" class="hm-list-item${i === 0 ? ' is-best' : ''}" data-id="${escapeHtml(s.id)}">
+          ${i === 0 ? '<span class="hm-item-best-tag">Più economico</span>' : ''}
+          <span class="hm-item-logo hm-item-logo-fallback">${escapeHtml(s.marca.charAt(0).toUpperCase())}</span>
+          <span class="hm-item-main">
+            <span class="hm-item-brand">${escapeHtml(s.marca)}</span>
+            <span class="hm-item-city">${escapeHtml(s.comune)}</span>
+            <span class="hm-item-addr">${escapeHtml(s.addr)}${s.cap ? ' &middot; ' + escapeHtml(s.cap) : ''}</span>
+            ${typeof dist === 'number' ? `<span class="hm-item-dist">${dist.toFixed(1).replace('.', ',')} km</span>` : ''}
+          </span>
+          <span class="hm-item-price-wrap">
+            <span class="hm-item-price">${intPart},${decPart}</span>
+            <span class="hm-item-unit">${FUEL_UNITS[selectedFuel]}</span>
+          </span>
+        </button>
+      </li>`;
+    }).join('');
+  }
+
+  listEl?.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement)?.closest('.hm-list-item') as HTMLElement | null;
+    if (!btn) return;
+    const s = lastResults.find(r => r.s.id === btn.dataset.id)?.s;
+    if (s) flyToStation(s);
+  });
+
+  fuelFiltersEl?.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement)?.closest('.hm-fuel-btn') as HTMLElement | null;
+    if (!btn) return;
+    selectedFuel = btn.dataset.fuel || 'benzina';
+    fuelFiltersEl.querySelectorAll('.hm-fuel-btn').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    renderList();
+  });
+
+  function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function fitTo(points: Station[], extra?: { lat: number; lng: number }) {
+    const lats = points.map(s => s.lat).concat(extra ? [extra.lat] : []);
+    const lngs = points.map(s => s.lng).concat(extra ? [extra.lng] : []);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    if (maxLat - minLat < 0.03 && maxLng - minLng < 0.03) {
+      leafletMap.flyTo([extra?.lat ?? lats[0], extra?.lng ?? lngs[0]], 14, { animate: true, duration: 1 });
+    } else {
+      leafletMap.flyToBounds([[minLat, minLng], [maxLat, maxLng]], {
+        padding: [48, 48], maxZoom: 14, animate: true, duration: 1,
+      });
+    }
+  }
+
+  function doGeoSearch(lat: number, lng: number) {
+    if (!mapReady) {
+      pendingGeo = { lat, lng };
+      setStatus('La mappa si sta caricando, la tua posizione sarà usata tra un istante...');
+      return;
+    }
+
+    const L = (window as any).L;
+
+    if (userMarker) leafletMap.removeLayer(userMarker);
+    userMarker = L.marker([lat, lng], {
+      icon: L.divIcon({ className: '', html: '<div class="hm-user-pin"></div>', iconSize: [16, 16] }),
+      zIndexOffset: 1000,
+    }).bindPopup('Sei qui', { className: 'hm-popup' }).addTo(leafletMap);
+
+    const withDist = stations
+      .map(s => ({ s, d: haversineKm(lat, lng, s.lat, s.lng) }))
+      .sort((a, b) => a.d - b.d);
+
+    let nearby = withDist.filter(x => x.d <= 10);
+    if (nearby.length < 5) nearby = withDist.slice(0, 5);
+
+    if (nearby.length === 0) {
+      leafletMap.flyTo([lat, lng], 12, { animate: true, duration: 1 });
+      setStatus('Nessun distributore trovato vicino a te.', 'error');
+      lastResults = [];
+      renderList();
+      return;
+    }
+
+    lastResults = nearby.map(x => ({ s: x.s, dist: x.d }));
+    renderList();
+    fitTo(nearby.map(x => x.s), { lat, lng });
+    setStatus(
+      `${plural(nearby.length, 'distributore', 'distributori')} vicino a te (il più vicino a ${nearby[0].d.toFixed(1).replace('.', ',')} km)`,
+      'ok'
+    );
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) {
+      setStatus('La geolocalizzazione non è disponibile su questo browser.', 'error');
+      return;
+    }
+
+    geoBtnEl?.setAttribute('disabled', 'true');
+    geoBtnEl?.classList.add('is-loading');
+    if (geoBtnLabelEl) geoBtnLabelEl.textContent = 'Localizzazione in corso...';
+    setStatus('Localizzazione in corso...');
+
+    const reset = () => {
+      geoBtnEl?.removeAttribute('disabled');
+      geoBtnEl?.classList.remove('is-loading');
+      if (geoBtnLabelEl) geoBtnLabelEl.textContent = GEO_LABEL;
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        reset();
+        doGeoSearch(pos.coords.latitude, pos.coords.longitude);
+      },
+      err => {
+        reset();
+        const messages: Record<number, string> = {
+          1: 'Localizzazione negata. Consenti l\'accesso alla posizione per usare questa funzione.',
+          2: 'Impossibile determinare la tua posizione in questo momento.',
+          3: 'La localizzazione ha richiesto troppo tempo. Riprova.',
+        };
+        setStatus(messages[err.code] || 'Impossibile usare la tua posizione.', 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  function doSearch(raw: string) {
+    const q = raw.trim();
+    if (!q) return;
+
+    if (!mapReady) {
+      pendingSearch = q;
+      setStatus('La mappa si sta caricando, la ricerca partirà tra un istante...');
+      return;
+    }
+
+    let matched: Station[] = [];
+
+    if (/^\d{3,5}$/.test(q)) {
+      // CAP completo, oppure le prime cifre (es. 401 per Bologna)
+      matched = stations.filter(s => s.cap && (q.length === 5 ? s.cap === q : s.cap.startsWith(q)));
+      if (matched.length === 0 && q.length === 5) matched = stations.filter(s => s.cap?.startsWith(q.slice(0, 3)));
+    } else {
+      const qn = norm(q);
+      matched = stations.filter(s => s.nome === qn);
+      if (matched.length === 0) matched = stations.filter(s => s.nome.startsWith(qn + '-') || s.nome.startsWith(qn));
+      if (matched.length === 0) matched = stations.filter(s => s.nome.includes(qn));
+
+      // Comuni omonimi in province diverse, o nomi che iniziano allo stesso
+      // modo: si tiene il gruppo più numeroso entro 40 km, per non dezoomare
+      // su mezza Italia.
+      if (matched.length > 1) {
+        const byComune = new Map<string, Station[]>();
+        matched.forEach(s => byComune.set(s.slug, (byComune.get(s.slug) ?? []).concat(s)));
+        const anchor = [...byComune.values()].sort((a, b) => b.length - a.length)[0][0];
+        const near = matched.filter(s => haversineKm(anchor.lat, anchor.lng, s.lat, s.lng) <= 40);
+        if (near.length > 0) matched = near;
+      }
+    }
+
+    if (matched.length === 0) {
+      setStatus('Nessun distributore trovato. Controlla il nome del comune oppure prova con il CAP.', 'error');
+      lastResults = [];
+      renderList();
+      return;
+    }
+
+    lastResults = matched.map(s => ({ s }));
+    renderList();
+    fitTo(matched);
+
+    const comuni = new Set(matched.map(s => s.slug));
+    const where = comuni.size === 1 ? matched[0].comune : q;
+    setStatus(`${plural(matched.length, 'distributore trovato', 'distributori trovati')} per «${where}»`, 'ok');
+  }
+
+  async function initMap() {
+    if (mapInitStarted) return;
+    mapInitStarted = true;
+    try {
+      await Promise.all([
+        loadCss('/vendor/leaflet/leaflet.css'),
+        loadCss('/vendor/leaflet/MarkerCluster.css'),
+        loadCss('/vendor/leaflet/MarkerCluster.Default.css'),
+      ]);
+      await loadScript('/vendor/leaflet/leaflet.js');
+      await loadScript('/vendor/leaflet/leaflet.markercluster.js');
+
+      const L = (window as any).L;
+      leafletMap = L.map(mapEl, { scrollWheelZoom: false }).setView([42.2, 12.6], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Prezzi: MIMIT (IODL 2.0)',
+      }).addTo(leafletMap);
+
+      const resp = await fetch('/data/impianti.json');
+      if (!resp.ok) throw new Error('Impossibile caricare i dati dei distributori.');
+      // Formato a colonne, vedi scripts/fetch-fuel-data.js.
+      const data: { marche: string[]; rows: any[][] } = await resp.json();
+      stations = data.rows.map(r => {
+        const prices: Record<string, number> = {};
+        if (r[7] != null) prices.benzina = r[7];
+        if (r[8] != null) prices.gasolio = r[8];
+        if (r[9] != null) prices.gpl = r[9];
+        if (r[10] != null) prices.metano = r[10];
+        const nome = norm(r[3]);
+        return {
+          id: r[0], lat: r[1], lng: r[2], comune: r[3], sigla: r[4], addr: r[5],
+          marca: data.marche[r[6]] ?? 'Distributore', prices, aut: r[11] === 1, cap: r[12] ?? '',
+          nome, slug: `${nome}-${String(r[4]).toLowerCase()}`,
+        };
+      });
+
+      const cluster = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 55 });
+
+      // Oltre 21.000 impianti: creare tutti i marker in un colpo solo
+      // bloccherebbe il thread principale. Si procede a lotti.
+      const CHUNK_SIZE = 1000;
+      let i = 0;
+      function addChunk() {
+        const end = Math.min(i + CHUNK_SIZE, stations.length);
+        for (; i < end; i++) {
+          const s = stations[i];
+          const b = s.prices.benzina;
+          const cls = b == null ? 'fuel-pin-na' : b <= nat.benzina ? 'fuel-pin-cheap' : 'fuel-pin-exp';
+          const icon = L.divIcon({
+            className: '',
+            html: `<div class="fuel-pin ${cls}" style="width:12px;height:12px"></div>`,
+            iconSize: [12, 12],
+          });
+          // Il popup viene costruito solo all'apertura: 21.000 stringhe HTML
+          // preparate in anticipo sarebbero memoria sprecata.
+          cluster.addLayer(
+            L.marker([s.lat, s.lng], { icon }).bindPopup(() => buildPopup(s), { className: 'hm-popup', maxWidth: 270 })
+          );
+        }
+
+        if (i < stations.length) {
+          setTimeout(addChunk, 0);
+          return;
+        }
+
+        leafletMap.addLayer(cluster);
+        if (loadingEl) loadingEl.remove();
+        mapReady = true;
+
+        if (pendingSearch) { doSearch(pendingSearch); pendingSearch = null; }
+        if (pendingGeo) { doGeoSearch(pendingGeo.lat, pendingGeo.lng); pendingGeo = null; }
+      }
+      addChunk();
+    } catch (err) {
+      if (loadingEl) loadingEl.innerHTML = '<span style="color:#64748b">Non è stato possibile caricare la mappa.</span>';
+      console.error(err);
+    }
+  }
+
+  formEl?.addEventListener('submit', e => {
+    e.preventDefault();
+    initMap();
+    scrollToMap();
+    doSearch(inputEl?.value || '');
+  });
+
+  geoBtnEl?.addEventListener('click', () => {
+    initMap();
+    scrollToMap();
+    locateMe();
+  });
+
+  suggestionsEl?.addEventListener('click', e => {
+    const btn = (e.target as HTMLElement)?.closest('.hm-chip') as HTMLElement | null;
+    const city = btn?.dataset.city;
+    if (!city) return;
+    if (inputEl) inputEl.value = city;
+    initMap();
+    scrollToMap();
+    doSearch(city);
+  });
+
+  // Appena l'utente tocca il campo di ricerca si avvia il caricamento della
+  // mappa: mentre scrive, Leaflet ha il tempo di essere pronto.
+  inputEl?.addEventListener('focus', () => initMap(), { once: true });
+
+  // La mappa è un miglioramento progressivo: si carica quando il thread
+  // principale è libero, per non competere con il primo rendering (LCP).
+  const win = window as any;
+  if (typeof win.requestIdleCallback === 'function') {
+    win.requestIdleCallback(initMap, { timeout: 2500 });
+  } else {
+    setTimeout(initMap, 300);
+  }
+</script>

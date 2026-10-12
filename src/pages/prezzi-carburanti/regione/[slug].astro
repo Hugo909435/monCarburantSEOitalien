@@ -1,0 +1,141 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import PriceCards from '../../../components/PriceCards.astro';
+import TopStations from '../../../components/TopStations.astro';
+import FAQ from '../../../components/FAQ.astro';
+import {
+  FUELS, FUEL_KEYS, MIN_IMPIANTI_SIGNIFICATIVI,
+  getNazionale, getRegioni, getProvince, getComuni, getImpiantiProvincia,
+  prezzo, diffCent, numero, type Regione,
+} from '../../../lib/fuel';
+
+export function getStaticPaths() {
+  return getRegioni().filter((r) => r.count > 0).map((regione) => ({ params: { slug: regione.slug }, props: { regione } }));
+}
+
+interface Props { regione: Regione }
+const { regione } = Astro.props;
+
+const naz = getNazionale().stats;
+const tutte = getRegioni().filter((r) => r.count > 0);
+const province = getProvince().filter((p) => regione.province.includes(p.sigla) && p.count > 0);
+const comuni = getComuni().filter((c) => regione.province.includes(c.sigla) && c.count >= MIN_IMPIANTI_SIGNIFICATIVI).slice(0, 40);
+const impianti = regione.province.flatMap((s) => getImpiantiProvincia(s));
+
+const posizione = (fuel: 'benzina' | 'gasolio') =>
+  [...tutte].filter((r) => r.stats[fuel]).sort((a, b) => a.stats[fuel]!.avg - b.stats[fuel]!.avg).findIndex((r) => r.slug === regione.slug) + 1;
+
+const b = regione.stats.benzina!;
+const g = regione.stats.gasolio!;
+
+const faq = [
+  {
+    question: `Quanto costa la benzina in ${regione.name}?`,
+    answer: `In ${regione.name} la benzina self service costa in media ${prezzo(b.avg)} €/L${b.servito ? ` (servito ${prezzo(b.servito)} €/L)` : ''}. Il distributore più economico la vende a ${prezzo(b.min)} €/L, il più caro a ${prezzo(b.max)} €/L.`,
+  },
+  {
+    question: `Quanto costa il gasolio in ${regione.name}?`,
+    answer: `Il gasolio self service costa in media ${prezzo(g.avg)} €/L${g.servito ? `, il servito ${prezzo(g.servito)} €/L` : ''}.`,
+  },
+  {
+    question: `Quanti distributori ci sono in ${regione.name}?`,
+    answer: `Abbiamo i prezzi di ${numero(regione.count)} distributori in ${regione.name}${regione.stats.gpl ? `, di cui ${numero(regione.stats.gpl.n)} vendono GPL` : ''}${regione.stats.metano ? ` e ${numero(regione.stats.metano.n)} metano` : ''}.`,
+  },
+];
+---
+
+<PrezziLayout
+  title={`Prezzi benzina e gasolio ${regione.name} oggi`}
+  description={`Prezzi carburanti in ${regione.name} oggi: benzina ${prezzo(b.avg)} €/L, gasolio ${prezzo(g.avg)} €/L (self). Province, comuni e distributori più economici.`}
+  h1={`Prezzi carburanti in ${regione.name}`}
+  lead={`Prezzi medi, distributori più economici e tutte le province ${regione.province.length > 1 ? `della regione` : ''}.`}
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: regione.name, href: `/prezzi-carburanti/regione/${regione.slug}/` },
+  ]}
+  count={regione.count}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi medi in {regione.name}</h2>
+      <PriceCards stats={regione.stats} reference={naz} />
+      <div class="pp-text" style="margin-top:1rem">
+        <p>
+          In {regione.name} la benzina self costa oggi in media {prezzo(b.avg)} €/L
+          {diffCent(b.avg, naz.benzina?.avg) && <>({diffCent(b.avg, naz.benzina?.avg)} sulla media nazionale)</>} e il gasolio
+          {' '}{prezzo(g.avg)} €/L {diffCent(g.avg, naz.gasolio?.avg) && <>({diffCent(g.avg, naz.gasolio?.avg)})</>}.
+          Tra le {tutte.length} regioni è la {posizione('benzina')}ª più economica per la benzina e la {posizione('gasolio')}ª per il gasolio.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>I distributori più economici in {regione.name}</h2>
+      <TopStations stations={impianti} limit={5} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi per provincia</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Provincia</th>
+              <th scope="col" class="num">Distributori</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {province.map((p) => (
+              <tr>
+                <td><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name} ({p.sigla})</a></td>
+                <td class="num">{numero(p.count)}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(p.stats[k]?.avg)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {comuni.length > 0 && (
+    <section class="pp-section">
+      <div class="container">
+        <h2>Comuni con più distributori</h2>
+        <div class="pp-links">
+          {comuni.map((c) => (
+            <a href={`/prezzi-carburanti/comune/${c.slug}/`}>
+              {c.name}
+              <small>{prezzo(c.stats.benzina?.avg)} €/L</small>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class="pp-section">
+    <div class="container" style="max-width:52rem">
+      <FAQ items={faq} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Altre regioni</h2>
+      <div class="pp-links">
+        {tutte.filter((r) => r.slug !== regione.slug).map((r) => (
+          <a href={`/prezzi-carburanti/regione/${r.slug}/`}>
+            {r.name}
+            <small>{prezzo(r.stats.benzina?.avg)} €/L</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</PrezziLayout>

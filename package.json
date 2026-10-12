@@ -1,0 +1,26 @@
+{
+  "name": "mio-carburante",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node scripts/fetch-fuel-data.js && astro build",
+    "build:astro": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "fetch-fuel": "node scripts/fetch-fuel-data.js",
+    "fetch-fuel:offline": "node scripts/fetch-fuel-data.js --offline"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/rss": "^4.0.11",
+    "@astrojs/sitemap": "^3.3.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "astro": "^5.7.0",
+    "tailwindcss": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

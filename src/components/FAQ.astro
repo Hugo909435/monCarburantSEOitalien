@@ -1,0 +1,144 @@
+---
+// FAQ visibile (accordion). Nessuno schema FAQPage: Google riserva i rich
+// result FAQ ai siti governativi e sanitari.
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+interface Props {
+  items: FAQItem[];
+  title?: string;
+}
+
+const { items, title = 'Domande frequenti' } = Astro.props;
+---
+
+<section class="faq-section" aria-label={title}>
+  <h2 class="faq-title">{title}</h2>
+  <dl class="faq-list">
+    {items.map((item, index) => (
+      <div class="faq-item">
+        <dt>
+          <button
+            class="faq-question"
+            aria-expanded="false"
+            aria-controls={`faq-answer-${index}`}
+            type="button"
+          >
+            {item.question}
+            <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </dt>
+        <dd id={`faq-answer-${index}`} class="faq-answer" hidden>
+          <div class="faq-answer-inner">
+            {item.answer}
+          </div>
+        </dd>
+      </div>
+    ))}
+  </dl>
+</section>
+
+<script>
+  // Accordion FAQ - js minimal
+  const questions = document.querySelectorAll<HTMLButtonElement>('.faq-question');
+
+  questions.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      const answerId = btn.getAttribute('aria-controls');
+      const answer = answerId ? document.getElementById(answerId) : null;
+
+      // Fermer les autres
+      questions.forEach((otherBtn) => {
+        if (otherBtn !== btn) {
+          otherBtn.setAttribute('aria-expanded', 'false');
+          const otherId = otherBtn.getAttribute('aria-controls');
+          const otherAnswer = otherId ? document.getElementById(otherId) : null;
+          if (otherAnswer) otherAnswer.hidden = true;
+        }
+      });
+
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      if (answer) answer.hidden = isOpen;
+    });
+  });
+</script>
+
+<style>
+  .faq-section {
+    margin-top: 2.5rem;
+    padding-top: 2.5rem;
+    border-top: 2px solid var(--color-border);
+  }
+
+  .faq-title {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin: 0 0 1.5rem;
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    border: 1px solid var(--color-border);
+    border-radius: 0.625rem;
+    overflow: hidden;
+  }
+
+  .faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: #f9fafb;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    gap: 0.75rem;
+    transition: background 0.15s ease;
+  }
+
+  .faq-question:hover {
+    background: #f3f4f6;
+  }
+
+  .faq-question[aria-expanded="true"] {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .faq-icon {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .faq-question[aria-expanded="true"] .faq-icon {
+    transform: rotate(180deg);
+  }
+
+  .faq-answer {
+    margin: 0;
+  }
+
+  .faq-answer-inner {
+    padding: 1rem 1.25rem;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    line-height: 1.7;
+  }
+</style>

@@ -1,0 +1,37 @@
+---
+// I distributori più economici, un riquadro per carburante.
+import { FUELS, FUEL_KEYS, piuEconomici, prezzo, nomeImpianto, type FuelKey, type Impianto } from '../lib/fuel';
+
+interface Props {
+  stations?: Impianto[];
+  /** Elenchi già calcolati (pagine marchio) */
+  lists?: Record<FuelKey, Impianto[]>;
+  limit?: number;
+  fuels?: FuelKey[];
+}
+
+const { stations = [], lists, limit = 5, fuels = FUEL_KEYS } = Astro.props;
+---
+
+<div class="pp-tops">
+  {fuels.map((k) => {
+    const list = lists ? lists[k].slice(0, limit) : piuEconomici(stations, k, limit);
+    if (list.length < 2) return null;
+    return (
+      <div class="pp-top">
+        <h3 style={`color:${FUELS[k].color}`}>{FUELS[k].label}</h3>
+        <ol>
+          {list.map((s) => (
+            <li>
+              <span>
+                {nomeImpianto(s)}
+                <small>{s.addr}, <a href={`/prezzi-carburanti/comune/${s.comuneSlug}/`}>{s.comune}</a></small>
+              </span>
+              <strong>{prezzo(s.p[k])}</strong>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  })}
+</div>

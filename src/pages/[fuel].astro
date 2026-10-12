@@ -1,0 +1,238 @@
+---
+// Pagine nazionali per carburante: /prezzo-benzina/, /prezzo-gasolio/, /prezzo-gpl/, /prezzo-metano/
+import PrezziLayout from '../layouts/PrezziLayout.astro';
+import FAQ from '../components/FAQ.astro';
+import {
+  FUELS, FUEL_KEYS, getMeta, getNazionale, getRegioni, getProvince, getComuni, getMarche,
+  prezzo, diffCent, euro, numero, dataLunga, modo, type FuelKey,
+} from '../lib/fuel';
+import { SITE } from '../config/site';
+
+export function getStaticPaths() {
+  return FUEL_KEYS.map((key) => ({ params: { fuel: FUELS[key].slug }, props: { fuelKey: key } }));
+}
+
+interface Props { fuelKey: FuelKey }
+const { fuelKey } = Astro.props;
+const fuel = FUELS[fuelKey];
+
+const meta = getMeta();
+const { stats: naz, autostrada } = getNazionale();
+const n = naz[fuelKey]!;
+const il = { benzina: 'la benzina', gasolio: 'il gasolio', gpl: 'il GPL', metano: 'il metano' }[fuelKey];
+const del = { benzina: 'della benzina', gasolio: 'del gasolio', gpl: 'del GPL', metano: 'del metano' }[fuelKey];
+const nome = fuelKey === 'gpl' ? 'GPL' : fuel.label.toLowerCase();
+// "self" per benzina e gasolio, nulla per GPL e metano (nessuna distinzione)
+const md = modo(fuelKey, n);
+const mdSelf = md ? ' ' + md + ' service' : '';
+const mdBreve = md ? ', ' + md : '';
+const mdParentesi = md ? ' (' + md + ')' : '';
+
+type WithStats = { stats: Partial<Record<FuelKey, { avg: number; n: number }>> };
+const ordina = <T extends WithStats>(list: T[], min = 1) =>
+  list.filter((x) => (x.stats[fuelKey]?.n ?? 0) >= min).sort((a, b) => a.stats[fuelKey]!.avg - b.stats[fuelKey]!.avg);
+
+const regioni = ordina(getRegioni());
+const province = ordina(getProvince(), 3);
+// Un comune entra in classifica solo con almeno 5 impianti che vendono il carburante.
+const comuni = ordina(getComuni(), 5);
+const marche = ordina(getMarche().filter((m) => m.slug !== 'altri-marchi'), 20);
+const provinciaDi = Object.fromEntries(getProvince().map((p) => [p.sigla, p]));
+
+const scartoServito = n.servito != null && n.servito > n.avg ? n.servito - n.avg : null;
+const aut = autostrada.autostrada[fuelKey];
+const str = autostrada.strada[fuelKey];
+const cent = (x: number) => (x * 100).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const quota = Math.round((n.n / meta.totalStations) * 100);
+
+const faq = [
+  {
+    question: `Quanto costa ${il} oggi in Italia?`,
+    answer: `Il ${dataLunga(meta.lastUpdate)} il prezzo medio ${del}${mdSelf} è di ${prezzo(n.avg)} ${fuel.unit}${scartoServito ? `, quello del servito di ${prezzo(n.servito)} ${fuel.unit}` : ''}. I prezzi vanno da ${prezzo(n.min)} a ${prezzo(n.max)} ${fuel.unit} a seconda dell'impianto (${numero(n.n)} distributori).`,
+  },
+  regioni.length > 1 && {
+    question: `In quale regione ${il} costa meno?`,
+    answer: `Oggi ${il} costa meno in ${regioni[0].name} (${prezzo(regioni[0].stats[fuelKey]!.avg)} ${fuel.unit} in media) e di più in ${regioni.at(-1)!.name} (${prezzo(regioni.at(-1)!.stats[fuelKey]!.avg)} ${fuel.unit}).`,
+  },
+  aut && str && {
+    question: `Quanto costa ${il} in autostrada?`,
+    answer: `In autostrada il prezzo medio${md ? ' ' + md : ''} è ${prezzo(aut.avg)} ${fuel.unit}, contro ${prezzo(str.avg)} ${fuel.unit} sulla rete stradale.${aut.servito && str.servito ? ` Al servito: ${prezzo(aut.servito)} contro ${prezzo(str.servito)} ${fuel.unit}.` : ''}`,
+  },
+  {
+    question: `Per quali veicoli è adatto ${il}?`,
+    answer: `${fuel.veicoli}.`,
+  },
+].filter(Boolean) as { question: string; answer: string }[];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: `Prezzo ${del} in Italia`,
+  description: `Prezzo medio ${del} per regione, provincia e comune, calcolato ogni giorno sui prezzi comunicati dai gestori al MIMIT.`,
+  url: `${SITE.url}/${fuel.slug}/`,
+  dateModified: meta.lastUpdate,
+  license: SITE.dataSource.licenceUrl,
+  isBasedOn: SITE.dataSource.url,
+  spatialCoverage: { '@type': 'Country', name: 'Italia' },
+  creator: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+};
+---
+
+<PrezziLayout
+  title={`Prezzo ${nome} oggi in Italia: media e classifiche`}
+  description={`Prezzo ${nome} oggi: ${prezzo(n.avg)} ${fuel.unit} in media${mdParentesi}${scartoServito ? `, ${prezzo(n.servito)} al servito` : ''}. Regioni, province e città dove costa meno, marchi a confronto.`}
+  h1={`Prezzo ${del} oggi in Italia`}
+  lead={`Media nazionale, regioni e province dove ${il} costa meno, e il confronto tra i marchi.`}
+  breadcrumb={[{ label: `Prezzo ${nome}`, href: `/${fuel.slug}/` }]}
+  count={n.n}
+  jsonLd={jsonLd}
+>
+  <section class="pp-section">
+    <div class="container">
+      <div class="pp-facts">
+        <div class="pp-fact">
+          <span class="pp-fact-label">Media nazionale{mdBreve}</span>
+          <span class="pp-fact-value">{prezzo(n.avg)} {fuel.unit}</span>
+          <span class="pp-fact-note">{numero(n.n)} distributori, {quota}% della rete</span>
+        </div>
+        {scartoServito && (
+          <div class="pp-fact" id="self-servito">
+            <span class="pp-fact-label">Media nazionale, servito</span>
+            <span class="pp-fact-value">{prezzo(n.servito)} {fuel.unit}</span>
+            <span class="pp-fact-note">{cent(scartoServito)} cent in più: {euro(scartoServito * 50)} € su 50 {fuelKey === 'metano' ? 'kg' : 'litri'}</span>
+          </div>
+        )}
+        <div class="pp-fact">
+          <span class="pp-fact-label">Il più economico</span>
+          <span class="pp-fact-value">{prezzo(n.min)} {fuel.unit}</span>
+          <span class="pp-fact-note">Il più caro: {prezzo(n.max)} {fuel.unit}</span>
+        </div>
+        {aut && str && (
+          <a class="pp-fact" href="/prezzi-carburanti/autostrada/">
+            <span class="pp-fact-label">In autostrada{mdBreve}</span>
+            <span class="pp-fact-value">{prezzo(aut.avg)} {fuel.unit}</span>
+            <span class="pp-fact-note">{diffCent(aut.avg, str.avg)} rispetto alla rete stradale</span>
+          </a>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzo {del} per regione</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Regione</th>
+              <th scope="col" class="num">Prezzo medio</th>
+              <th scope="col" class="num">Scarto dalla media</th>
+              <th scope="col" class="num">Distributori</th>
+            </tr>
+          </thead>
+          <tbody>
+            {regioni.map((r, i) => (
+              <tr>
+                <td>{i + 1}</td>
+                <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+                <td class="num">{prezzo(r.stats[fuelKey]!.avg)}</td>
+                <td class="num">{diffCent(r.stats[fuelKey]!.avg, n.avg)}</td>
+                <td class="num">{numero(r.stats[fuelKey]!.n)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Dove {il} costa meno, e dove di più</h2>
+      <div class="pp-tops">
+        <div class="pp-top">
+          <h3>Le 10 province più economiche</h3>
+          <ol>
+            {province.slice(0, 10).map((p) => (
+              <li>
+                <span><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a><small>{p.regione}</small></span>
+                <strong>{prezzo(p.stats[fuelKey]!.avg)}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class="pp-top">
+          <h3>Le 10 province più care</h3>
+          <ol>
+            {province.slice(-10).reverse().map((p) => (
+              <li>
+                <span><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a><small>{p.regione}</small></span>
+                <strong>{prezzo(p.stats[fuelKey]!.avg)}</strong>
+              </li>
+            ))}
+          </ol>
+        </div>
+        {comuni.length >= 20 && (
+          <div class="pp-top">
+            <h3>Le 10 città più economiche</h3>
+            <ol>
+              {comuni.slice(0, 10).map((c) => (
+                <li>
+                  <span><a href={`/prezzi-carburanti/comune/${c.slug}/`}>{c.name}</a><small>{provinciaDi[c.sigla]?.name}</small></span>
+                  <strong>{prezzo(c.stats[fuelKey]!.avg)}</strong>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+      <p class="pp-note">Prezzi medi{mdSelf} in {fuel.unit}. Entrano in classifica solo i comuni con almeno cinque distributori che vendono {il}.</p>
+    </div>
+  </section>
+
+  {marche.length > 2 && (
+    <section class="pp-section">
+      <div class="container">
+        <h2>Prezzo {del} per marchio</h2>
+        <div class="pp-links">
+          {marche.map((m) => (
+            <a href={`/prezzi-carburanti/marca/${m.slug}/`}>
+              {m.name}
+              <small>{prezzo(m.stats[fuelKey]!.avg)} {fuel.unit}</small>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class="pp-section">
+    <div class="container pp-text">
+      <h2>{fuel.label}: cosa sapere</h2>
+      {fuel.descrizione.map((p) => <p>{p}</p>)}
+      <p><strong>Adatto a:</strong> {fuel.veicoli}.</p>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container" style="max-width:52rem">
+      <FAQ items={faq} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Altri carburanti</h2>
+      <div class="pp-links">
+        {FUEL_KEYS.filter((k) => k !== fuelKey && naz[k]).map((k) => (
+          <a href={`/${FUELS[k].slug}/`}>
+            Prezzo {k === 'gpl' ? 'GPL' : FUELS[k].label.toLowerCase()}
+            <small>{prezzo(naz[k]!.avg)} {FUELS[k].unit}</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</PrezziLayout>

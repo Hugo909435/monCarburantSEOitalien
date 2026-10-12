@@ -1,0 +1,83 @@
+---
+// Layout di base: involucro HTML condiviso da tutte le pagine
+import '../styles/global.css';
+import '../styles/prezzi.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import SEO from '../components/SEO.astro';
+import { SITE } from '../config/site';
+
+interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  image?: string;
+  imageAlt?: string;
+  type?: 'website' | 'article';
+  publishedAt?: string;
+  updatedAt?: string;
+  authorName?: string;
+  noIndex?: boolean;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  bodyClass?: string;
+}
+
+const { title, bodyClass, ...seo } = Astro.props;
+
+// Google tronca i titoli intorno ai 60 caratteri: il nome del sito si aggiunge
+// solo se il risultato resta entro il limite.
+const suffix = ` | ${SITE.name}`;
+const fullTitle = title.includes(SITE.name) || title.length + suffix.length > 60 ? title : `${title}${suffix}`;
+const GA_ID = SITE.gaId;
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+
+    {GA_ID && (
+      <>
+        <!-- Google Consent Mode v2: tutto negato finché l'utente non acconsente -->
+        <script is:inline define:vars={{ GA_ID }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag() { dataLayer.push(arguments); }
+          window.gtag = gtag;
+          gtag('consent', 'default', {
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            analytics_storage: 'denied',
+            wait_for_update: 500,
+          });
+          gtag('js', new Date());
+          gtag('config', GA_ID, { anonymize_ip: true });
+        </script>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+      </>
+    )}
+
+    <!-- Precaricamento delle risorse critiche -->
+    <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin fetchpriority="high" />
+    <link rel="preload" href="/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin fetchpriority="high" />
+    <link rel="preload" href="/images/logo-transparent.svg" as="image" type="image/svg+xml" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <SEO title={fullTitle} {...seo} />
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    <a href="#main-content" class="skip-link">Vai al contenuto principale</a>
+    <Header />
+    <main id="main-content">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

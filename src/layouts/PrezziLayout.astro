@@ -1,0 +1,39 @@
+---
+// Layout delle pagine dei prezzi: intestazione con briciole, H1, data dei dati.
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { getMeta, dataLunga, numero } from '../lib/fuel';
+import { SITE } from '../config/site';
+
+interface Props {
+  title: string;
+  description: string;
+  h1: string;
+  lead?: string;
+  breadcrumb: { label: string; href: string }[];
+  noIndex?: boolean;
+  /** Numero di impianti su cui si basa la pagina */
+  count?: number;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const { title, description, h1, lead, breadcrumb, noIndex, count, jsonLd } = Astro.props;
+const meta = getMeta();
+---
+
+<BaseLayout title={title} description={description} noIndex={noIndex} jsonLd={jsonLd}>
+  <slot name="head" slot="head" />
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, ...breadcrumb]} />
+      <h1>{h1}</h1>
+      {lead && <p class="pp-lead">{lead}</p>}
+      <p class="pp-meta">
+        Prezzi in vigore il <time datetime={meta.lastUpdate}>{dataLunga(meta.lastUpdate)}</time>
+        {count != null && ` · ${numero(count)} ${count === 1 ? 'distributore' : 'distributori'}`}
+        {' '}· Fonte: <a href={SITE.dataSource.url} rel="noopener noreferrer">MIMIT</a> ({SITE.dataSource.licence})
+      </p>
+    </div>
+  </div>
+  <slot />
+</BaseLayout>

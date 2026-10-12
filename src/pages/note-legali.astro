@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../config/site';
+---
+
+<BaseLayout title="Note legali" description={`Note legali di ${SITE.name}: editore, proprietà dei contenuti, fonte e licenza dei dati.`}>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Note legali', href: Astro.url.pathname }]} />
+      <h1>Note legali</h1>
+    </div>
+  </div>
+  <div class="container pp-page pp-text">
+    {/*
+      Come sul sito francese dello stesso editore, vale la legge francese n. 2004-575
+      (LCEN). Anonimato dell'editore non professionale: articolo 1-1, letto il
+      12 ottobre 2026 su Légifrance (legifrance.gouv.fr/loda/id/JORFTEXT000000801164)
+      e confermato da simonnetavocat.fr (dal 23 maggio 2024 l'articolo 6, III non
+      esiste più: il contenuto è passato all'articolo 1-1).
+    */}
+    <h2>Editore</h2>
+    <p>
+      {SITE.name} è un sito di confronto dei prezzi dei carburanti pubblicato a titolo non professionale da
+      <strong>{SITE.editor}</strong>.
+    </p>
+    <p>
+      Come consente l'articolo 1-1 della legge francese n. 2004-575 del 21 giugno 2004 agli editori non professionali,
+      l'editore mette a disposizione del pubblico soltanto i dati del fornitore di hosting, al quale ha comunicato i
+      propri dati identificativi.
+    </p>
+    <h2>Direttore della pubblicazione</h2>
+    <p>{SITE.editor}. Contatto: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a></p>
+    <h2>Hosting</h2>
+    <p>
+      Il sito è ospitato da {SITE.host.name}, {SITE.host.address}
+      (<a href={SITE.host.url} rel="noopener noreferrer">hostinger.com</a>).
+    </p>
+    <h2>Proprietà intellettuale</h2>
+    <p>
+      I testi, la grafica e il logo di {SITE.name} appartengono all'editore del sito. È vietato riprodurli o modificarli,
+      in tutto o in parte, senza il suo consenso scritto. È consentito citarne brevi estratti indicando la fonte
+      ({SITE.name}) con un link alla pagina di origine. I dati sui prezzi non appartengono all'editore: valgono le
+      condizioni indicate qui sotto.
+    </p>
+    <h2>Fonte e licenza dei dati</h2>
+    <p>
+      I prezzi e l'anagrafica degli impianti provengono dagli open data del Ministero delle Imprese e del Made in Italy
+      (<a href={SITE.dataSource.url} rel="noopener noreferrer">{SITE.dataSource.label}</a>), riutilizzati secondo la
+      <a href={SITE.dataSource.licenceUrl} rel="noopener noreferrer license">Italian Open Data License 2.0</a>.
+      {SITE.name} non è un sito ufficiale e il Ministero non ne approva né garantisce i contenuti.
+    </p>
+    <h2>Responsabilità</h2>
+    <p>
+      I prezzi sono forniti a titolo informativo. Fa fede unicamente il prezzo esposto presso il distributore.
+      {SITE.name} non risponde di eventuali differenze tra i prezzi pubblicati e quelli effettivamente praticati.
+    </p>
+    <h2>Link verso altri siti</h2>
+    <p>
+      Il sito contiene link verso siti di terzi. L'editore non ne controlla i contenuti e non risponde dei danni che
+      possono derivare dalla loro consultazione.
+    </p>
+    <h2>Mappe</h2>
+    <p>Le mappe usano i dati di <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer">OpenStreetMap</a> e dei suoi contributori.</p>
+    <h2>Dati personali e cookie</h2>
+    <p>Il trattamento dei dati personali e l'uso dei cookie sono descritti nella pagina <a href="/privacy/">Privacy e cookie</a>.</p>
+    <h2>Legge applicabile</h2>
+    <p>
+      Le presenti note legali sono regolate dal diritto francese. In caso di controversia, e in mancanza di una
+      soluzione amichevole, sono competenti i tribunali francesi, fatte salve le norme inderogabili a tutela dei
+      consumatori.
+    </p>
+    <h2>Contatti</h2>
+    <p>Per qualsiasi domanda su queste note legali puoi scrivere a <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.</p>
+  </div>
+</BaseLayout>

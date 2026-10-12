@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../config/site';
+
+// Questa pagina descrive il sito com'è oggi: nessuno strumento di misurazione,
+// nessuna pubblicità, nessun cookie. Attivare Analytics o AdSense senza
+// riscrivere la sezione «Cookie» (elenco dei cookie, raccolta del consenso)
+// renderebbe falsa l'informativa: il build si ferma.
+if (SITE.gaId || SITE.adsClient) {
+  throw new Error('privacy.astro: aggiornare la sezione «Cookie» prima di attivare gaId o adsClient (src/config/site.ts)');
+}
+
+// Fonti, lette il 12 ottobre 2026.
+// Diritti dell'interessato e reclamo: Regolamento (UE) 2016/679, articoli 15-21 e 77.
+// Garante, denominazione e indirizzo: garanteprivacy.it/home/footer/contatti e
+// garanteprivacy.it/it/diritti/come-agire-per-tutelare-i-tuoi-dati-personali/reclamo.
+const aggiornamento = 'ottobre 2026';
+---
+
+<BaseLayout title="Privacy e cookie" description={`Informativa sulla privacy e sui cookie di ${SITE.name}.`} noIndex>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Privacy e cookie', href: Astro.url.pathname }]} />
+      <h1>Privacy e cookie</h1>
+    </div>
+  </div>
+  <div class="container pp-page pp-text">
+    <p>Ultimo aggiornamento: {aggiornamento}</p>
+    <p>
+      Questa pagina spiega quali dati personali tratta {SITE.name} e a quale scopo, ai sensi del Regolamento (UE)
+      2016/679 (GDPR).
+    </p>
+
+    <h2>Titolare del trattamento</h2>
+    <p>
+      Il titolare del trattamento è l'editore del sito, {SITE.editor}, che agisce a titolo non professionale.
+      Contatto: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>
+    </p>
+
+    <h2>Quali dati trattiamo</h2>
+    <p>Per consultare il sito non serve registrarsi e non chiediamo alcun dato personale.</p>
+    <p>
+      <strong>Messaggi e-mail.</strong> Se ci scrivi, trattiamo il tuo indirizzo e-mail e il contenuto del messaggio al
+      solo scopo di risponderti. La base giuridica è il nostro legittimo interesse a rispondere alle richieste
+      ricevute (art. 6, par. 1, lett. f del GDPR). I messaggi sono conservati per 3 anni dall'ultimo contatto.
+    </p>
+    <p>
+      <strong>Dati tecnici.</strong> Come per ogni sito web, il fornitore di hosting ({SITE.host.name}) tratta i dati
+      tecnici necessari a trasmettere le pagine, per esempio l'indirizzo IP.
+    </p>
+    <p>Il sito non ha newsletter né moduli di iscrizione.</p>
+
+    <h2>Posizione</h2>
+    <p>
+      La funzione «Trova un distributore vicino a me» usa la posizione del dispositivo solo all'interno del browser,
+      per calcolare le distanze. La posizione non viene inviata né conservata sui nostri server.
+    </p>
+
+    <h2>Mappe</h2>
+    <p>
+      Le immagini delle mappe sono caricate dai server di OpenStreetMap: quando visualizzi una mappa, il tuo browser
+      si collega a quei server, che ricevono quindi il tuo indirizzo IP. Per saperne di più puoi consultare
+      l'<a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener noreferrer">informativa della OpenStreetMap Foundation</a>.
+    </p>
+
+    <h2>Cookie</h2>
+    <p>
+      {SITE.name} non installa cookie: non usa strumenti di misurazione del pubblico né pubblicità. Se in futuro
+      saranno introdotti, questa pagina sarà aggiornata e i cookie non necessari saranno installati solo con il tuo
+      consenso.
+    </p>
+
+    <h2>A chi sono comunicati i dati</h2>
+    <p>
+      I tuoi dati non sono venduti né ceduti a terzi. Possono essere trattati dai fornitori tecnici del sito (il
+      fornitore di hosting e il servizio di posta elettronica) soltanto per erogare i loro servizi.
+    </p>
+
+    <h2>I tuoi diritti</h2>
+    <p>In base al GDPR puoi:</p>
+    <ul>
+      <li>accedere ai tuoi dati e ottenerne una copia (art. 15);</li>
+      <li>far correggere i dati inesatti (art. 16);</li>
+      <li>chiederne la cancellazione (art. 17);</li>
+      <li>chiedere la limitazione del trattamento (art. 18);</li>
+      <li>ricevere i tuoi dati in un formato strutturato e leggibile da dispositivo automatico (art. 20);</li>
+      <li>opporti a un trattamento fondato sul nostro legittimo interesse (art. 21).</li>
+    </ul>
+    <p>
+      Per esercitare questi diritti scrivi a <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.
+    </p>
+    <p>
+      Se ritieni che i tuoi diritti non siano stati rispettati, puoi proporre reclamo all'autorità di controllo del
+      Paese in cui risiedi (art. 77). In Italia è il Garante per la protezione dei dati personali, Piazza Venezia 11,
+      00187 Roma (<a href="https://www.garanteprivacy.it" rel="noopener noreferrer">garanteprivacy.it</a>).
+    </p>
+
+    <h2>Sicurezza</h2>
+    <p>Il sito usa il protocollo HTTPS per proteggere lo scambio dei dati.</p>
+
+    <h2>Modifiche</h2>
+    <p>
+      Questa informativa può essere modificata. In caso di modifiche sostanziali aggiorneremo la data indicata in
+      cima alla pagina.
+    </p>
+  </div>
+</BaseLayout>

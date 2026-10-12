@@ -1,0 +1,85 @@
+---
+import PrezziLayout from '../../../layouts/PrezziLayout.astro';
+import PriceCards from '../../../components/PriceCards.astro';
+import StationTable from '../../../components/StationTable.astro';
+import LocalMap from '../../../components/LocalMap.astro';
+import {
+  getNazionale, getAutostrade, getProvince, getImpiantiProvincia, prezzo, numero, type Autostrada,
+} from '../../../lib/fuel';
+import { autostradaIndicizzabile } from '../../../config/indicizzazione.mjs';
+
+export function getStaticPaths() {
+  return getAutostrade().map((aut) => ({ params: { slug: aut.slug }, props: { aut } }));
+}
+
+interface Props { aut: Autostrada }
+const { aut } = Astro.props;
+
+const media = getNazionale().autostrada.autostrada;
+const impianti = getProvince().flatMap((p) => getImpiantiProvincia(p.sigla)).filter((s) => s.aut === aut.code);
+const province = [...new Set(impianti.map((s) => s.sigla))];
+const altre = getAutostrade().filter((a) => a.code !== aut.code);
+const b = aut.stats.benzina;
+const g = aut.stats.gasolio;
+
+// Sigla, nome d'uso e percorso: vedi scripts/autostrade-italia.js
+const titolo = aut.nome ? 'Prezzi benzina ' + aut.code + ' ' + aut.nome + ' oggi' : 'Prezzi benzina autostrada ' + aut.code + ' oggi: aree di servizio';
+const h1 = aut.nome ? 'Prezzi carburanti sulla ' + aut.code + ', ' + aut.nome : "Prezzi carburanti sull'autostrada " + aut.code;
+const etichetta = aut.nome ? aut.code + ' (' + aut.nome + ')' : aut.code;
+const aree = aut.count === 1 ? "un'area di servizio" : aut.count + ' aree di servizio';
+const lead = (aut.percorso ? aut.percorso + ': ' : '') + aree + ' con prezzi self e servito di oggi, dalla più economica alla più cara.';
+---
+
+<PrezziLayout
+  title={titolo}
+  description={`Prezzi carburanti sull'autostrada ${etichetta} oggi: benzina self da ${prezzo(b?.min)} €/L, gasolio da ${prezzo(g?.min)} €/L. ${aut.count} aree di servizio a confronto.`}
+  h1={h1}
+  lead={lead}
+  breadcrumb={[
+    { label: 'Prezzi carburanti', href: '/prezzi-carburanti/' },
+    { label: 'Autostrade', href: '/prezzi-carburanti/autostrada/' },
+    { label: aut.code, href: `/prezzi-carburanti/autostrada/${aut.slug}/` },
+  ]}
+  noIndex={!autostradaIndicizzabile(aut.count)}
+  count={aut.count}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi medi sulla {aut.code}</h2>
+      <PriceCards stats={aut.stats} reference={media} referenceLabel="media delle autostrade" />
+      <p class="pp-note">
+        {aut.nome && <>La {aut.code} è nota come {aut.nome}. </>}
+        {aut.percorso && <>Percorso: {aut.percorso}. </>}
+        Le aree di servizio della {aut.code} si trovano in {numero(province.length)} {province.length === 1 ? 'provincia' : 'province'} ({province.join(', ')}).
+      </p>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Aree di servizio sulla {aut.code}</h2>
+      <StationTable stations={impianti} showComune initial={100} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Mappa delle aree di servizio</h2>
+      <LocalMap stations={impianti} label={`Mappa delle aree di servizio sull'autostrada ${aut.code}`} />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Altre autostrade</h2>
+      <div class="pp-links" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr))">
+        {altre.map((a) => (
+          <a href={`/prezzi-carburanti/autostrada/${a.slug}/`}>
+            <span>{a.code}{a.nome && <small style="display:block;white-space:normal">{a.nome}</small>}</span>
+            <small>{a.count} aree</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</PrezziLayout>

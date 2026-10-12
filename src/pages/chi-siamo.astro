@@ -1,0 +1,48 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SITE } from '../config/site';
+---
+
+<BaseLayout title="Chi siamo" description={`Chi c’è dietro ${SITE.name}, da dove arrivano i dati e come si finanzia il sito.`}>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Chi siamo', href: Astro.url.pathname }]} />
+      <h1>Chi siamo</h1>
+    </div>
+  </div>
+  <div class="container pp-page pp-text">
+    <p>
+      <strong>{SITE.name}</strong> è un sito indipendente che rende facili da consultare i prezzi dei carburanti
+      comunicati ogni giorno dai gestori al Ministero delle Imprese e del Made in Italy.
+    </p>
+    <h2>Cosa facciamo</h2>
+    <p>
+      Scarichiamo ogni giorno gli open data dell'Osservaprezzi carburanti, li ripuliamo e li organizziamo per regione,
+      provincia, comune, marchio e autostrada. Il metodo è descritto nella
+      <a href="/prezzi-carburanti/metodologia/">metodologia</a>.
+    </p>
+    <h2>Indipendenza</h2>
+    <p>
+      Non siamo collegati al Ministero né ad alcuna compagnia petrolifera. Nessun distributore paga per comparire
+      o per essere messo in evidenza: l'ordine è sempre quello del prezzo.
+    </p>
+    <h2>Chi pubblica il sito</h2>
+    <p>
+      Il sito è pubblicato a titolo non professionale da {SITE.editor}. I dati dell'editore e del fornitore di hosting
+      sono nelle <a href="/note-legali/">note legali</a>; per scriverci, vai alla pagina <a href="/contatti/">Contatti</a>.
+    </p>
+    <h2>Come si finanzia</h2>
+    {SITE.adsClient ? (
+      <p>
+        Il sito è gratuito e si finanzia con la pubblicità. Gli annunci non influiscono in alcun modo sui prezzi né
+        sull'ordine dei distributori.
+      </p>
+    ) : (
+      <p>
+        Il sito è gratuito. Al momento non ospita pubblicità né link di affiliazione: se in futuro saranno introdotti
+        degli annunci, lo indicheremo in questa pagina.
+      </p>
+    )}
+  </div>
+</BaseLayout>

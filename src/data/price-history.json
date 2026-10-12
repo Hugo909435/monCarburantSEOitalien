@@ -1,0 +1,20 @@
+[
+ {
+  "date": "2026-10-08",
+  "benzina": 2.038,
+  "gasolio": 2.265,
+  "gpl": 0.775,
+  "metano": 1.907,
+  "benzinaServito": 2.176,
+  "gasolioServito": 2.397
+ },
+ {
+  "date": "2026-10-11",
+  "benzina": 2.035,
+  "gasolio": 2.255,
+  "gpl": 0.777,
+  "metano": 1.912,
+  "benzinaServito": 2.174,
+  "gasolioServito": 2.388
+ }
+]

@@ -1,0 +1,116 @@
+---
+import PrezziLayout from '../../layouts/PrezziLayout.astro';
+import PriceCards from '../../components/PriceCards.astro';
+import {
+  FUELS, FUEL_KEYS, MIN_IMPIANTI_SIGNIFICATIVI,
+  getMeta, getNazionale, getRegioni, getComuni, getMarche, getAutostrade, prezzo, numero,
+} from '../../lib/fuel';
+
+const meta = getMeta();
+const naz = getNazionale().stats;
+const regioni = getRegioni().filter((r) => r.count > 0);
+const comuni = getComuni().filter((c) => c.count >= MIN_IMPIANTI_SIGNIFICATIVI).slice(0, 60);
+const marche = getMarche().filter((m) => m.slug !== 'altri-marchi');
+const autostrade = getAutostrade();
+---
+
+<PrezziLayout
+  title="Prezzi carburanti oggi in Italia: regioni, province, comuni"
+  description={`Prezzi di benzina, gasolio, GPL e metano oggi in Italia: medie per regione, provincia e comune, marchi e autostrade. ${numero(meta.totalStations)} distributori, dati MIMIT.`}
+  h1="Prezzi carburanti in Italia"
+  lead="Prezzi medi e distributori più economici per regione, provincia, comune, marchio e autostrada."
+  breadcrumb={[{ label: 'Prezzi carburanti', href: '/prezzi-carburanti/' }]}
+  count={meta.totalStations}
+>
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi medi nazionali</h2>
+      <PriceCards stats={naz} link />
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi per regione</h2>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr>
+              <th scope="col">Regione</th>
+              <th scope="col" class="num">Distributori</th>
+              {FUEL_KEYS.map((k) => <th scope="col" class="num">{FUELS[k].label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {regioni.map((r) => (
+              <tr>
+                <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+                <td class="num">{numero(r.count)}</td>
+                {FUEL_KEYS.map((k) => <td class="num">{prezzo(r.stats[k]?.avg)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="pp-note"><a href="/prezzi-carburanti/province/">Tutte le province</a></p>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi nei comuni con più distributori</h2>
+      <div class="pp-links">
+        {comuni.map((c) => (
+          <a href={`/prezzi-carburanti/comune/${c.slug}/`}>
+            {c.name}
+            <small>{prezzo(c.stats.benzina?.avg)} €/L</small>
+          </a>
+        ))}
+      </div>
+      <p class="pp-note">Benzina self, prezzo medio. Per gli altri comuni parti dalla pagina della provincia.</p>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi per marchio</h2>
+      <div class="pp-links">
+        {marche.map((m) => (
+          <a href={`/prezzi-carburanti/marca/${m.slug}/`}>
+            {m.name}
+            <small>{numero(m.count)} impianti</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container">
+      <h2>Prezzi in autostrada</h2>
+      <div class="pp-links" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr))">
+        {autostrade.map((a) => (
+          <a href={`/prezzi-carburanti/autostrada/${a.slug}/`}>
+            {a.code}
+            <small>{a.count} aree</small>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="pp-section">
+    <div class="container pp-text">
+      <h2>Come funziona il confronto</h2>
+      <p>
+        Ogni gestore è tenuto a comunicare al Ministero delle Imprese e del Made in Italy i prezzi praticati nel proprio
+        impianto. Da queste comunicazioni calcoliamo ogni giorno il prezzo medio di ogni comune, provincia e regione e
+        mettiamo in ordine i distributori dal più economico al più caro.
+      </p>
+      <p>
+        I dettagli su fonte, aggiornamento e calcolo delle medie sono nella
+        <a href="/prezzi-carburanti/metodologia/">metodologia</a>.
+      </p>
+    </div>
+  </section>
+</PrezziLayout>

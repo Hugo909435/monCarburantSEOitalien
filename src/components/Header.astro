@@ -1,0 +1,935 @@
+---
+// Header principale: logo + navigazione con menu "Prezzi carburanti"
+import { getProvince, getMarche, getAutostrade } from '../lib/fuel';
+import { SITE } from '../config/site';
+
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/prezzi-carburanti/autostrada/', label: 'Autostrade' },
+  { href: '/chi-siamo/', label: 'Chi siamo' },
+  { href: '/contatti/', label: 'Contatti' },
+];
+
+const province = getProvince().filter((p) => p.count > 0);
+const marche = getMarche()
+  .filter((m) => m.slug !== 'altri-marchi')
+  .slice()
+  .sort((a, b) => a.name.localeCompare(b.name, 'it'));
+const autostrade = getAutostrade();
+
+const { pathname } = Astro.url;
+
+function isActive(href: string): boolean {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(href);
+}
+
+const isAutostradaActive = pathname.startsWith('/prezzi-carburanti/autostrada/');
+const isPrezziActive = (pathname.startsWith('/prezzi-carburanti/') && !isAutostradaActive) || pathname.startsWith('/prezzo-');
+const isBenzinaActive = pathname.startsWith('/prezzo-benzina/');
+---
+
+<header class="site-header" role="banner">
+  <div class="container header-inner">
+    <!-- Logo -->
+    <a href="/" class="logo" aria-label={`${SITE.name} - Torna alla home`}>
+      <img src="/images/logo-transparent.svg" alt={SITE.name} class="logo-img" width="64" height="64" />
+      <span class="logo-text">{SITE.logoA}<strong>{SITE.logoB}</strong></span>
+    </a>
+
+    <!-- Navigazione desktop -->
+    <nav id="main-nav" aria-label="Navigazione principale">
+      <ul role="list">
+        {navLinks.slice(0, 1).map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class:list={['nav-link', { active: isActive(link.href) }]}
+              aria-current={pathname === link.href ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+
+        <!-- Prezzi carburanti: menu a tendina -->
+        <li class="has-dropdown">
+          <div class="dropdown-trigger-wrap">
+            <a
+              href="/prezzi-carburanti/"
+              class:list={['nav-link', { active: isPrezziActive }]}
+              aria-current={isPrezziActive ? 'page' : undefined}
+            >
+              Prezzi carburanti
+            </a>
+            <button
+              class="dropdown-caret"
+              type="button"
+              aria-label="Mostra il sottomenu Prezzi carburanti"
+              aria-expanded="false"
+              aria-controls="dropdown-prix"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div class="dropdown-panel" id="dropdown-prix">
+            <!-- Intestazione visibile solo a tutto schermo su mobile -->
+            <div class="dropdown-panel-header">
+              <button type="button" class="dropdown-back" aria-label="Torna al menu">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                Indietro
+              </button>
+              <span class="dropdown-panel-title">Prezzi carburanti</span>
+            </div>
+
+            <div class="dropdown-search-wrap">
+              <svg class="dropdown-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="search"
+                class="dropdown-search"
+                placeholder="Cerca una provincia, un marchio o un'autostrada"
+                aria-label="Cerca una provincia, un marchio o un'autostrada"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="dropdown-panel-body">
+              <div class="dropdown-col dropdown-col-dept">
+                <p class="dropdown-heading">
+                  <button type="button" class="dropdown-col-toggle" aria-expanded="false" aria-controls="dropdown-dept-list">
+                    Per provincia
+                    <svg class="dropdown-col-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </p>
+                <a href="/prezzi-carburanti/province/" class="dropdown-see-all">Tutte le province →</a>
+                <div class="dropdown-dept-grid" id="dropdown-dept-list">
+                  {province.map((p) => (
+                    <a href={`/prezzi-carburanti/provincia/${p.slug}/`} class="dropdown-dept-link">
+                      <span class="dropdown-dept-num">{p.sigla}</span> {p.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div class="dropdown-col dropdown-col-brand">
+                <p class="dropdown-heading">
+                  <button type="button" class="dropdown-col-toggle" aria-expanded="false" aria-controls="dropdown-brand-list">
+                    Per marchio
+                    <svg class="dropdown-col-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </p>
+                <a href="/prezzi-carburanti/marca/" class="dropdown-see-all">Tutti i marchi →</a>
+                <div class="dropdown-brand-list" id="dropdown-brand-list">
+                  {marche.map((m) => (
+                    <a href={`/prezzi-carburanti/marca/${m.slug}/`} class="dropdown-brand-link">
+                      {m.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div class="dropdown-col dropdown-col-highway">
+                <p class="dropdown-heading">
+                  <button type="button" class="dropdown-col-toggle" aria-expanded="false" aria-controls="dropdown-highway-list">
+                    Per autostrada
+                    <svg class="dropdown-col-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </p>
+                <a href="/prezzi-carburanti/autostrada/" class="dropdown-see-all">Tutte le autostrade →</a>
+                <div class="dropdown-highway-list" id="dropdown-highway-list">
+                  {autostrade.map((a) => (
+                    <a href={`/prezzi-carburanti/autostrada/${a.slug}/`} class="dropdown-highway-link">
+                      {a.code}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p class="dropdown-empty" hidden>Nessun risultato per questa ricerca.</p>
+          </div>
+        </li>
+
+        {navLinks.slice(1).map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class:list={['nav-link', { active: isActive(link.href) }]}
+              aria-current={pathname === link.href ? 'page' : undefined}
+            >
+              {link.label}
+            </a>
+          </li>
+        ))}
+
+        <li class="nav-cta-item">
+          <a
+            href="/prezzo-benzina/"
+            class:list={['nav-cta', { active: isBenzinaActive }]}
+            aria-current={isBenzinaActive ? 'page' : undefined}
+          >
+            Prezzo benzina oggi
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Pulsante menu mobile -->
+    <button
+      class="mobile-toggle"
+      aria-label="Apri il menu"
+      aria-expanded="false"
+      aria-controls="main-nav"
+      type="button"
+    >
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem;
+    gap: 1rem;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    text-decoration: none;
+  }
+
+  .logo-img {
+    display: block;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+  }
+
+  .logo:hover {
+    color: var(--color-primary);
+  }
+
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .logo-text strong {
+    font-weight: 800;
+    color: var(--color-accent);
+  }
+
+  nav ul {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-link {
+    display: block;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text);
+    border-radius: 0.375rem;
+    transition: color 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+
+  .nav-link:hover {
+    color: var(--color-accent);
+    background: #fff7ed;
+  }
+
+  .nav-link.active {
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* CTA distinct : c'est la page qui ramène le plus de trafic, elle mérite
+     un bouton visible plutôt qu'un lien texte de plus dans la nav. */
+  .nav-cta-item {
+    margin-left: 0.25rem;
+  }
+
+  .nav-cta {
+    display: block;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-accent);
+    border-radius: 999px;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .nav-cta:hover {
+    background: #d0651a;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .nav-cta.active {
+    background: var(--color-primary);
+  }
+
+  /* Menu déroulant "Prix carburants" */
+  .has-dropdown {
+    position: relative;
+  }
+
+  .dropdown-trigger-wrap {
+    display: flex;
+    align-items: center;
+  }
+
+  .dropdown-trigger-wrap .nav-link {
+    padding-right: 0.25rem;
+  }
+
+  .dropdown-caret {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.375rem;
+    color: var(--color-text);
+    border-radius: 0.375rem;
+    transition: transform 0.2s ease, background 0.15s ease;
+  }
+
+  .dropdown-caret:hover {
+    background: #fff7ed;
+    color: var(--color-accent);
+  }
+
+  .has-dropdown.open .dropdown-caret {
+    transform: rotate(180deg);
+    color: var(--color-accent);
+  }
+
+  .dropdown-panel {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    /* pas de marge verticale : le survol doit rester continu entre le
+       déclencheur et le panneau, sinon la souris "sort" du menu */
+    top: 100%;
+    left: 0;
+    background: #fff;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 0.14);
+    padding: 1.25rem;
+    z-index: 200;
+  }
+
+  /* Sur desktop, le panneau est centré sous le bouton déclencheur */
+  @media (min-width: 1024px) {
+    .dropdown-panel {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Bascule via JS si le panneau centré déborderait de l'écran */
+  .dropdown-panel.align-right {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .dropdown-panel.align-left {
+    left: 0;
+    transform: none;
+  }
+
+  .has-dropdown.open .dropdown-panel {
+    display: flex;
+  }
+
+  .dropdown-panel-header {
+    display: none;
+  }
+
+  .dropdown-panel-title {
+    font-weight: 700;
+  }
+
+  .dropdown-search-wrap {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .dropdown-search-icon {
+    position: absolute;
+    left: 0.7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+  }
+
+  .dropdown-search {
+    width: 100%;
+    padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: #f9fafb;
+    color: var(--color-text);
+  }
+
+  .dropdown-search:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+    background: #fff;
+  }
+
+  .dropdown-search::-webkit-search-cancel-button {
+    cursor: pointer;
+  }
+
+  .dropdown-panel-body {
+    display: flex;
+    gap: 1.75rem;
+  }
+
+  .dropdown-col {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .dropdown-col-dept {
+    flex: 1.6 1 0;
+  }
+
+  .dropdown-heading {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0 0 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid currentColor;
+  }
+
+  .dropdown-col-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: inherit;
+    cursor: default;
+    text-align: left;
+  }
+
+  .dropdown-col-caret {
+    display: none;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .dropdown-col-dept .dropdown-heading {
+    color: var(--color-primary);
+  }
+
+  .dropdown-col-brand .dropdown-heading {
+    color: var(--color-accent);
+  }
+
+  .dropdown-col-highway {
+    flex: 0.9 1 0;
+  }
+
+  .dropdown-col-highway .dropdown-heading {
+    color: var(--color-primary);
+  }
+
+  .dropdown-see-all {
+    display: inline-block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+    margin-bottom: 0.75rem;
+  }
+
+  .dropdown-see-all:hover {
+    text-decoration: underline;
+  }
+
+  .dropdown-dept-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.125rem 1rem;
+    max-height: 22rem;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  .dropdown-dept-link,
+  .dropdown-brand-link {
+    display: block;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    border-radius: 0.25rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .dropdown-dept-link:hover,
+  .dropdown-brand-link:hover {
+    color: var(--color-accent);
+    background: #fff7ed;
+  }
+
+  .dropdown-dept-num {
+    color: #9ca3af;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dropdown-brand-list,
+  .dropdown-highway-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem 1rem;
+    max-height: 22rem;
+    overflow-y: auto;
+  }
+
+  .dropdown-highway-link {
+    display: block;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    border-radius: 0.25rem;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .dropdown-highway-link:hover {
+    color: var(--color-accent);
+    background: #fff7ed;
+  }
+
+  .dropdown-empty {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    text-align: center;
+  }
+
+  /* Bloque le scroll de fond quand le sous-menu plein écran (mobile) est ouvert */
+  :global(body.dropdown-lock-scroll) {
+    overflow: hidden;
+  }
+
+  /* Desktop large : sous-menu plus spacieux, davantage de colonnes */
+  @media (min-width: 1024px) {
+    .dropdown-panel {
+      width: min(94vw, 64rem);
+    }
+
+    .dropdown-panel-body {
+      gap: 2rem;
+    }
+
+    .dropdown-dept-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      max-height: 26rem;
+    }
+
+    .dropdown-brand-list,
+    .dropdown-highway-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-height: 26rem;
+    }
+
+    .dropdown-dept-link,
+    .dropdown-brand-link,
+    .dropdown-highway-link {
+      font-size: 0.875rem;
+      padding: 0.3125rem 0.5rem;
+    }
+  }
+
+  .mobile-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.375rem;
+    border-radius: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .mobile-toggle:hover {
+    background: #f3f4f6;
+  }
+
+  .hamburger-line {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  /* État ouvert du menu */
+  .mobile-toggle[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .mobile-toggle[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-toggle[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  @media (max-width: 1023px) {
+    .mobile-toggle {
+      display: flex;
+    }
+
+    nav {
+      position: absolute;
+      top: 4rem;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-bottom: 1px solid var(--color-border);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08);
+      display: none;
+      padding: 0.75rem 0;
+    }
+
+    nav.open {
+      display: block;
+    }
+
+    nav ul {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      padding: 0 1rem;
+    }
+
+    .nav-cta-item {
+      margin: 0.5rem 0 0.25rem;
+    }
+
+    .nav-cta {
+      text-align: center;
+      padding: 0.625rem 0.75rem;
+    }
+
+    .nav-link {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.9375rem;
+      border-radius: 0.5rem;
+    }
+
+    .dropdown-trigger-wrap {
+      justify-content: space-between;
+    }
+
+    /* Sur mobile, le sous-menu s'ouvre en plein écran plutôt qu'en accordéon
+       imbriqué : plus lisible pour parcourir 96 départements + 24 marques,
+       et la recherche permet de filtrer directement. */
+    .dropdown-panel {
+      position: fixed;
+      inset: 4rem 0 0 0;
+      transform: none;
+      display: none;
+      box-shadow: none;
+      border: none;
+      border-radius: 0;
+      background: #fff;
+      margin: 0;
+      padding: 1rem 1.25rem 1.5rem;
+      width: auto;
+      max-width: none;
+      z-index: 300;
+      overflow-y: auto;
+    }
+
+    .dropdown-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .dropdown-back {
+      position: absolute;
+      left: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.125rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      padding: 0.5rem 0.5rem 0.5rem 0;
+    }
+
+    .dropdown-panel-body {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .dropdown-dept-grid,
+    .dropdown-brand-list,
+    .dropdown-highway-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-height: none;
+      overflow-y: visible;
+    }
+
+    /* Accordéon : chaque colonne est repliée par défaut sur mobile */
+    .dropdown-col-toggle {
+      cursor: pointer;
+    }
+
+    .dropdown-col-caret {
+      display: block;
+    }
+
+    .dropdown-dept-grid,
+    .dropdown-brand-list,
+    .dropdown-highway-list {
+      display: none;
+    }
+
+    .dropdown-col.open .dropdown-dept-grid,
+    .dropdown-col.open .dropdown-brand-list,
+    .dropdown-col.open .dropdown-highway-list {
+      display: grid;
+    }
+
+    .dropdown-col.open .dropdown-col-caret {
+      transform: rotate(180deg);
+    }
+  }
+</style>
+
+<script>
+  // Menu mobile - toggle hamburger + sous-menu "Prix carburants"
+  const toggle = document.querySelector('.mobile-toggle') as HTMLButtonElement | null;
+  const nav = document.querySelector('#main-nav') as HTMLElement | null;
+  const dropdownItem = document.querySelector('.has-dropdown') as HTMLElement | null;
+  const dropdownCaret = document.querySelector('.dropdown-caret') as HTMLButtonElement | null;
+  const dropdownPanel = document.querySelector('.dropdown-panel') as HTMLElement | null;
+  const dropdownBack = document.querySelector('.dropdown-back') as HTMLButtonElement | null;
+  const searchInput = document.querySelector('.dropdown-search') as HTMLInputElement | null;
+  const emptyMsg = document.querySelector('.dropdown-empty') as HTMLElement | null;
+
+  const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+  const hasRealHover = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  const closeDropdown = () => {
+    dropdownItem?.classList.remove('open');
+    dropdownCaret?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('dropdown-lock-scroll');
+  };
+
+  if (toggle && nav) {
+    toggle.addEventListener('click', () => {
+      const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!isOpen));
+      toggle.setAttribute('aria-label', isOpen ? 'Apri il menu' : 'Chiudi il menu');
+      nav.classList.toggle('open', !isOpen);
+      if (isOpen) closeDropdown();
+    });
+
+    // Fermer sur clic en dehors
+    document.addEventListener('click', (e) => {
+      if (!toggle.contains(e.target as Node) && !nav.contains(e.target as Node)) {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Apri il menu');
+        nav.classList.remove('open');
+        closeDropdown();
+      }
+    });
+  }
+
+  if (dropdownItem && dropdownCaret && dropdownPanel) {
+    // Repositionne le panneau à droite du bouton (desktop) s'il déborderait de l'écran
+    const repositionDropdown = () => {
+      dropdownPanel.classList.remove('align-right', 'align-left');
+      const rect = dropdownPanel.getBoundingClientRect();
+      if (rect.right > window.innerWidth - 8) {
+        dropdownPanel.classList.add('align-right');
+      } else if (rect.left < 8) {
+        dropdownPanel.classList.add('align-left');
+      }
+    };
+
+    const openDropdown = () => {
+      dropdownItem.classList.add('open');
+      dropdownCaret.setAttribute('aria-expanded', 'true');
+      if (isDesktop()) {
+        requestAnimationFrame(repositionDropdown);
+      } else {
+        document.body.classList.add('dropdown-lock-scroll');
+      }
+    };
+
+    dropdownCaret.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (dropdownItem.classList.contains('open')) {
+        closeDropdown();
+      } else {
+        openDropdown();
+      }
+    });
+
+    dropdownBack?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeDropdown();
+    });
+
+    // Survol souris uniquement sur les appareils avec un vrai pointeur (pas tactile)
+    if (hasRealHover()) {
+      dropdownItem.addEventListener('mouseenter', openDropdown);
+      dropdownItem.addEventListener('mouseleave', closeDropdown);
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!dropdownItem.contains(e.target as Node)) {
+        closeDropdown();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDropdown();
+    });
+  }
+
+  // Accordéon mobile : chaque colonne (département/marque/autoroute) se déplie
+  // indépendamment. Sans effet en desktop, où les 3 colonnes restent toujours visibles.
+  const dropdownCols = Array.from(document.querySelectorAll<HTMLElement>('.dropdown-col'));
+  dropdownCols.forEach((col) => {
+    const colToggle = col.querySelector<HTMLButtonElement>('.dropdown-col-toggle');
+    colToggle?.addEventListener('click', () => {
+      if (isDesktop()) return;
+      const isOpen = col.classList.toggle('open');
+      colToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
+  // Recherche live dans le sous-menu (départements + marques + autoroutes)
+  if (searchInput && dropdownPanel) {
+    const DIACRITICS = new RegExp('[\\u0300-\\u036f]', 'g');
+    const normalize = (s: string) => s.normalize('NFD').replace(DIACRITICS, '').toLowerCase();
+
+    const deptLinks = Array.from(dropdownPanel.querySelectorAll<HTMLElement>('.dropdown-dept-link'));
+    const brandLinks = Array.from(dropdownPanel.querySelectorAll<HTMLElement>('.dropdown-brand-link'));
+    const highwayLinks = Array.from(dropdownPanel.querySelectorAll<HTMLElement>('.dropdown-highway-link'));
+    const deptCol = dropdownPanel.querySelector<HTMLElement>('.dropdown-col-dept');
+    const brandCol = dropdownPanel.querySelector<HTMLElement>('.dropdown-col-brand');
+    const highwayCol = dropdownPanel.querySelector<HTMLElement>('.dropdown-col-highway');
+
+    // En recherche, on déplie automatiquement les colonnes qui ont des résultats
+    // (sinon l'utilisateur tape dans une liste repliée et ne voit rien).
+    const setColOpen = (col: HTMLElement | null, open: boolean) => {
+      if (!col) return;
+      col.classList.toggle('open', open);
+      col.querySelector('.dropdown-col-toggle')?.setAttribute('aria-expanded', String(open));
+    };
+
+    searchInput.addEventListener('input', () => {
+      const q = normalize(searchInput.value.trim());
+
+      let deptMatches = 0;
+      deptLinks.forEach((el) => {
+        const match = !q || normalize(el.textContent || '').includes(q);
+        el.style.display = match ? '' : 'none';
+        if (match) deptMatches++;
+      });
+
+      let brandMatches = 0;
+      brandLinks.forEach((el) => {
+        const match = !q || normalize(el.textContent || '').includes(q);
+        el.style.display = match ? '' : 'none';
+        if (match) brandMatches++;
+      });
+
+      let highwayMatches = 0;
+      highwayLinks.forEach((el) => {
+        const match = !q || normalize(el.textContent || '').includes(q);
+        el.style.display = match ? '' : 'none';
+        if (match) highwayMatches++;
+      });
+
+      if (deptCol) deptCol.style.display = deptMatches ? '' : 'none';
+      if (brandCol) brandCol.style.display = brandMatches ? '' : 'none';
+      if (highwayCol) highwayCol.style.display = highwayMatches ? '' : 'none';
+      if (emptyMsg) emptyMsg.hidden = deptMatches + brandMatches + highwayMatches > 0;
+
+      // Déplie les colonnes en résultat, replie tout quand le champ est vidé
+      setColOpen(deptCol, q !== '' && deptMatches > 0);
+      setColOpen(brandCol, q !== '' && brandMatches > 0);
+      setColOpen(highwayCol, q !== '' && highwayMatches > 0);
+    });
+  }
+</script>
