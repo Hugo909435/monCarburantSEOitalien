@@ -32,6 +32,14 @@ Source unique : open data du MIMIT (ministère italien), licence **IODL 2.0**, u
 Fichiers générés, non versionnés : `src/data/fuel/` et `public/data/`.
 Fichier versionné : `src/data/price-history.json` (une ligne par jour, pour les futurs graphiques).
 
+## Mise en ligne
+
+Dépôt : `github.com/Hugo909435/monCarburantSEOitalien`. Hébergement : Hostinger, domaine `mio-carburante.it`.
+
+`.github/workflows/deploy.yml` télécharge les prix, construit le site, enregistre la ligne du jour dans `price-history.json` et envoie `dist/` par FTP. Il tourne deux fois par jour (8 h 30 et 13 h 30 UTC), à chaque push sur `main`, et à la demande depuis l'onglet Actions.
+
+Secrets à définir dans le dépôt GitHub : `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`. Sans eux, le site est construit mais pas envoyé. Le compte FTP doit ouvrir directement le `public_html` du site italien : le déploiement efface du serveur ce qui n'est pas dans `dist/`, et s'annule si le `robots.txt` distant ne cite pas le domaine.
+
 ## Pages
 
 | URL | Nombre |

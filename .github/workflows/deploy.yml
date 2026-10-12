@@ -1,0 +1,131 @@
+name: Mise à jour des prix et déploiement Hostinger
+
+# Le ministère publie un fichier de prix par jour, le matin. Deux passages : le
+# second rattrape une publication tardive. Les heures sont en UTC.
+on:
+  schedule:
+    - cron: '30 8 * * *'
+    - cron: '30 13 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hostinger-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Installation des dépendances
+        run: npm ci
+
+      # S'arrête sans rien écrire si le fichier du ministère est incomplet.
+      - name: Téléchargement des prix du MIMIT
+        run: node scripts/fetch-fuel-data.js
+
+      - name: Build Astro
+        run: npx astro build
+        env:
+          NODE_ENV: production
+
+      # Seul fichier de données versionné : une ligne par jour, pour les graphiques.
+      - name: Sauvegarde de l'historique des prix
+        run: |
+          if git diff --quiet src/data/price-history.json; then
+            echo "Historique inchangé."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/price-history.json
+          git commit -m "Historique des prix : $(date -u +%F)"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Vérification des secrets FTP
+        id: ftp
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_HOST" ] || [ -z "$FTP_USER" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::warning::Secrets FTP_HOST, FTP_USER ou FTP_PASSWORD absents : site construit mais non déployé."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installation de lftp
+        if: steps.ftp.outputs.ready == 'true'
+        run: sudo apt-get install -y --no-install-recommends lftp
+
+      # Le déploiement efface du serveur tout ce qui n'est pas dans dist/. On
+      # vérifie donc d'abord que le compte FTP ouvre bien le dossier de ce site
+      # et pas celui d'un autre : son robots.txt doit citer le domaine.
+      - name: Contrôle du dossier distant
+        if: steps.ftp.outputs.ready == 'true'
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          lftp --env-password -u "$FTP_USER" -p 21 \
+            -e "set ftp:ssl-allow no; set net:timeout 30; set net:max-retries 2; cat robots.txt; quit" \
+            "$FTP_HOST" > remote-robots.txt
+          if ! grep -q "mio-carburante.it" remote-robots.txt; then
+            echo "::error::Le dossier ouvert par le compte FTP n'est pas celui de mio-carburante.it : déploiement annulé."
+            exit 1
+          fi
+          rm -f remote-robots.txt
+
+      # Réglages FTP repris du déploiement du site français, chez le même hébergeur.
+      - name: Déploiement vers Hostinger
+        if: steps.ftp.outputs.ready == 'true'
+        timeout-minutes: 30
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          for attempt in 1 2 3; do
+            echo "::group::Tentative de déploiement $attempt/3"
+            if lftp --env-password -u "$FTP_USER" -p 21 \
+                 -e "set ftp:ssl-allow no; \
+                     set ftp:passive-mode true; \
+                     set net:timeout 30; \
+                     set net:max-retries 1; \
+                     set net:persist-retries 0; \
+                     set mirror:parallel-transfer-count 2; \
+                     set mirror:parallel-directories no; \
+                     set cmd:fail-exit yes; \
+                     lcd dist; \
+                     mirror -R --delete --exclude-glob .well-known/ . .; \
+                     quit" \
+                "$FTP_HOST"; then
+              echo "::endgroup::"
+              echo "Déploiement réussi à la tentative $attempt."
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "Tentative $attempt échouée."
+            sleep $((60 * attempt))
+          done
+          echo "::error::Déploiement échoué après 3 tentatives."
+          exit 1
