@@ -481,3 +481,25 @@ a.pp-fact:hover {
   font-size: 0.88rem;
   color: var(--color-text-secondary);
 }
+.guida-card img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 960 / 630;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.guida-figura {
+  margin: 0 0 1.5rem;
+}
+.guida-figura img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 960 / 630;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.guida-figura figcaption {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}

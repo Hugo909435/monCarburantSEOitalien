@@ -24,6 +24,7 @@ import { SITE } from '../../config/site';
       <div class="guida-elenco">
         {GUIDE.map((g) => (
           <a class="guida-card" href={`/guide/${g.slug}/`}>
+            <img src={`/images/guide/${g.slug}.jpg`} width="960" height="630" alt="" loading="lazy" />
             <strong>{g.titolo}</strong>
             <span>{g.sintesi}</span>
           </a>

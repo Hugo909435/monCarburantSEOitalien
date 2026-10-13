@@ -5,6 +5,7 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 import { GUIDE, getGuida } from '../config/guide';
 import { getMeta, dataCon } from '../lib/fuel';
 import { SITE } from '../config/site';
+import { IMMAGINI_GUIDE } from '../config/guide-images';
 
 interface Props {
   slug: string;
@@ -16,6 +17,9 @@ const { slug, fonti = [] } = Astro.props;
 const guida = getGuida(slug);
 const meta = getMeta();
 const url = `/guide/${guida.slug}/`;
+// Immagine e crediti: src/config/guide-images.ts
+const immagine = IMMAGINI_GUIDE[guida.slug];
+const immagineUrl = `/images/guide/${guida.slug}.jpg`;
 // Le tre guide successive nell'elenco: così tutte sono collegate tra loro.
 const i = GUIDE.indexOf(guida);
 const altre = [1, 2, 3].map((n) => GUIDE[(i + n) % GUIDE.length]);
@@ -29,8 +33,8 @@ const jsonLd = {
   dateModified: meta.lastUpdate,
   inLanguage: SITE.lang,
   mainEntityOfPage: `${SITE.url}${url}`,
-  image: `${SITE.url}/images/og-default.png`,
-  author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  image: `${SITE.url}${immagineUrl}`,
+  author: { '@type': 'Person', name: SITE.editor },
   publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
 };
 ---
@@ -41,6 +45,9 @@ const jsonLd = {
   type="article"
   publishedAt={guida.pubblicata}
   updatedAt={meta.lastUpdate}
+  authorName={SITE.editor}
+  image={immagineUrl}
+  imageAlt={immagine.alt}
   jsonLd={jsonLd}
 >
   <div class="pp-hero">
@@ -49,7 +56,7 @@ const jsonLd = {
       <h1>{guida.titolo}</h1>
       <p class="pp-lead">{guida.sintesi}</p>
       <p class="pp-meta">
-        Prezzi in vigore <time datetime={meta.lastUpdate}>{dataCon('il', meta.lastUpdate)}</time>
+        Di {SITE.editor} · Pubblicata {dataCon('il', guida.pubblicata)} · Prezzi in vigore <time datetime={meta.lastUpdate}>{dataCon('il', meta.lastUpdate)}</time>
         · Fonte dei prezzi: <a href={SITE.dataSource.url} rel="noopener noreferrer">MIMIT</a> ({SITE.dataSource.licence})
         · Sito non ufficiale
       </p>
@@ -57,6 +64,13 @@ const jsonLd = {
   </div>
 
   <article class="container pp-page pp-text guida">
+    <figure class="guida-figura">
+      <img src={immagineUrl} width="960" height="630" alt={immagine.alt} />
+      <figcaption>
+        Immagine: <a href={immagine.url} rel="noopener noreferrer">{immagine.autore}</a>, {immagine.licenza}, via Wikimedia Commons.
+      </figcaption>
+    </figure>
+
     <slot />
 
     <h2>Fonti</h2>
@@ -77,6 +91,7 @@ const jsonLd = {
       <div class="guida-elenco">
         {altre.map((g) => (
           <a class="guida-card" href={`/guide/${g.slug}/`}>
+            <img src={`/images/guide/${g.slug}.jpg`} width="960" height="630" alt="" loading="lazy" />
             <strong>{g.titolo}</strong>
             <span>{g.sintesi}</span>
           </a>

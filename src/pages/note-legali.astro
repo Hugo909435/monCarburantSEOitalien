@@ -12,22 +12,10 @@ import { SITE } from '../config/site';
     </div>
   </div>
   <div class="container pp-page pp-text">
-    {/*
-      Come sul sito francese dello stesso editore, vale la legge francese n. 2004-575
-      (LCEN). Anonimato dell'editore non professionale: articolo 1-1, letto il
-      12 ottobre 2026 su Légifrance (legifrance.gouv.fr/loda/id/JORFTEXT000000801164)
-      e confermato da simonnetavocat.fr (dal 23 maggio 2024 l'articolo 6, III non
-      esiste più: il contenuto è passato all'articolo 1-1).
-    */}
     <h2>Editore</h2>
     <p>
       {SITE.name} è un sito di confronto dei prezzi dei carburanti pubblicato a titolo non professionale da
       <strong>{SITE.editor}</strong>.
-    </p>
-    <p>
-      Come consente l'articolo 1-1 della legge francese n. 2004-575 del 21 giugno 2004 agli editori non professionali,
-      l'editore mette a disposizione del pubblico soltanto i dati del fornitore di hosting, al quale ha comunicato i
-      propri dati identificativi.
     </p>
     <h2>Direttore della pubblicazione</h2>
     <p>{SITE.editor}. Contatto: <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a></p>
