@@ -117,12 +117,25 @@ const jsonLd = [
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
     provider: { '@id': `${SITE.url}/#organization` },
   },
+  // Dataset : stessa fonte MIMIT, licenza e URL di SITE.dataSource usati sulle pagine carburante
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: 'Prezzi praticati dei carburanti in Italia',
+    description: `Prezzi di benzina, gasolio, GPL e metano presso ${numero(meta.totalStations)} distributori italiani, dagli open data del MIMIT, aggiornati ogni giorno.`,
+    url: `${SITE.url}/`,
+    dateModified: meta.lastUpdate,
+    license: SITE.dataSource.licenceUrl,
+    isBasedOn: SITE.dataSource.url,
+    spatialCoverage: { '@type': 'Country', name: 'Italia' },
+    creator: { '@type': 'Organization', name: 'Ministero delle Imprese e del Made in Italy (MIMIT)', url: 'https://www.mimit.gov.it/' },
+  },
 ];
 ---
 
 <BaseLayout
-  title={`Prezzi benzina e gasolio oggi | ${SITE.name}`}
-  description={`Prezzi carburanti oggi: benzina ${prezzo(benzina.avg)} €/L, gasolio ${prezzo(gasolio.avg)} €/L (self). Trova il distributore più economico vicino a te su mappa.`}
+  title={`Prezzi benzina e gasolio oggi in Italia | ${SITE.name}`}
+  description={`Prezzi carburanti oggi in Italia: benzina ${prezzo(benzina.avg)} €/L, gasolio ${prezzo(gasolio.avg)} €/L (self). Confronta ${numero(meta.totalStations)} distributori su mappa e trova il più economico vicino a te.`}
   canonical="/"
   jsonLd={jsonLd}
 >
