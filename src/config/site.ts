@@ -28,7 +28,7 @@ export const SITE = {
   // «Cookie» di src/pages/privacy.astro; Analytics parte solo dopo il consenso.
   // adsClient: prima di compilarlo, scrivere la parte sulla pubblicità della
   // sezione «Cookie» (il build si ferma finché non è fatto).
-  gaId: '',
+  gaId: 'G-0CH8CM88FW',
   adsClient: '',
   dataSource: {
     label: 'MIMIT, Osservaprezzi carburanti',

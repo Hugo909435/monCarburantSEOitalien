@@ -111,5 +111,5 @@ Rubrique `/guide/`, créée le 13 octobre 2026 : 15 articles sur des sujets ital
 Pages légales rédigées le 12 octobre 2026 à partir de celles du site français (même éditeur, même hébergeur). Restent à faire :
 
 - remplacer `contactEmail` dans `src/config/site.ts` par une adresse du domaine italien quand elle existera (pour l'instant celle du site français) ;
-- Analytics : il suffit de remplir `gaId` (format `G-XXXXXXXXXX`). Cela active le bandeau de consentement (`src/components/CookieBanner.astro`, logique dans `public/js/cookie-consenso.js`) et la version « avec Analytics » de la section « Cookie » de `src/pages/privacy.astro`. Google Analytics n'est chargé qu'après acceptation. Bandeau écrit et testé en local le 13 octobre 2026 ;
+- Analytics : `gaId` rempli le 13 octobre 2026 (`G-0CH8CM88FW`). Cela active le bandeau de consentement (`src/components/CookieBanner.astro`, logique dans `public/js/cookie-consenso.js`) et la version « avec Analytics » de la section « Cookie » de `src/pages/privacy.astro`. Google Analytics n'est chargé qu'après acceptation. Bandeau écrit et testé en local le 13 octobre 2026 ;
 - AdSense : avant de remplir `adsClient`, écrire la partie publicité de la section « Cookie » et étendre le bandeau aux cookies publicitaires : le build s'arrête tant que ce n'est pas fait.
