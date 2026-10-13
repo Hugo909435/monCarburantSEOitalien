@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
       - name: Checkout du dépôt
@@ -95,10 +95,14 @@ jobs:
           fi
           rm -f remote-robots.txt
 
-      # Réglages FTP repris du déploiement du site français, chez le même hébergeur.
+      # Réglages FTP repris du déploiement du site français, chez le même hébergeur,
+      # sauf le parallélisme : ici chaque page est seule dans son dossier (plus de
+      # 5 500 dossiers), donc sans traitement des dossiers en parallèle l'envoi se
+      # fait un fichier à la fois et dépasse le délai (constaté le 13 octobre 2026 :
+      # environ 1 800 pages en 30 minutes).
       - name: Déploiement vers Hostinger
         if: steps.ftp.outputs.ready == 'true'
-        timeout-minutes: 30
+        timeout-minutes: 45
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -112,8 +116,9 @@ jobs:
                      set net:timeout 30; \
                      set net:max-retries 1; \
                      set net:persist-retries 0; \
-                     set mirror:parallel-transfer-count 2; \
-                     set mirror:parallel-directories no; \
+                     set net:connection-limit 6; \
+                     set mirror:parallel-transfer-count 6; \
+                     set mirror:parallel-directories yes; \
                      set cmd:fail-exit yes; \
                      lcd dist; \
                      mirror -R --delete --exclude-glob .well-known/ . .; \
