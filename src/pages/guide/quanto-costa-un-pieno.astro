@@ -1,0 +1,94 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, prezzo, euro, dataLunga } from '../../lib/fuel';
+import { composizione, perc, intervallo90 } from '../../lib/guide';
+import { DATA_VERIFICA } from '../../config/fisco';
+
+const naz = getNazionale().stats;
+const b = naz.benzina!;
+const g = naz.gasolio!;
+const gpl = naz.gpl;
+const LITRI = [40, 50, 60, 70];
+const compB = composizione(b.avg);
+const compG = composizione(g.avg);
+const rangeB = intervallo90('benzina');
+const rangeG = intervallo90('gasolio');
+
+const regioni = getRegioni().filter((r) => r.stats.benzina).sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+const rMin = regioni[0];
+const rMax = regioni[regioni.length - 1];
+---
+
+<GuidaLayout slug="quanto-costa-un-pieno">
+  <h2>Il costo di un pieno con i prezzi di oggi</h2>
+  <p>
+    Con il prezzo medio nazionale di oggi in self service, {prezzo(b.avg)} euro al litro per la benzina e
+    {prezzo(g.avg)} euro al litro per il gasolio, un pieno da 50 litri costa {euro(b.avg * 50)} euro a benzina e
+    {euro(g.avg * 50)} euro a gasolio.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th>Litri</th><th class="num">Benzina self</th><th class="num">Benzina servito</th>
+          <th class="num">Gasolio self</th><th class="num">Gasolio servito</th>
+        </tr>
+      </thead>
+      <tbody>
+        {LITRI.map((l) => (
+          <tr>
+            <td>{l} litri</td>
+            <td class="num">{euro(b.avg * l)} €</td>
+            <td class="num">{b.servito != null ? `${euro(b.servito * l)} €` : '–'}</td>
+            <td class="num">{euro(g.avg * l)} €</td>
+            <td class="num">{g.servito != null ? `${euro(g.servito * l)} €` : '–'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    La capacità del serbatoio cambia da un modello all'altro: la trovi nel libretto di uso e manutenzione della tua
+    auto. Per un calcolo preciso moltiplica i litri che fai di solito per il prezzo del tuo distributore.
+  </p>
+
+  <h2>Quanto cambia da un distributore all'altro</h2>
+  <p>
+    Il prezzo medio non vale per tutti i distributori. Oggi nove distributori su dieci vendono la benzina in self a un prezzo
+    compreso tra {prezzo(rangeB.da)} e {prezzo(rangeB.a)} euro al litro: su 50 litri vuol dire da {euro(rangeB.da * 50)} a
+    {euro(rangeB.a * 50)} euro. Per il gasolio, allo stesso modo, si va da {euro(rangeG.da * 50)} a {euro(rangeG.a * 50)} euro.
+  </p>
+  <p>
+    Anche la regione conta: un pieno da 50 litri di benzina costa in media {euro(rMin.stats.benzina!.avg * 50)} euro
+    nella regione meno cara ({rMin.name}) e {euro(rMax.stats.benzina!.avg * 50)} euro nella più cara ({rMax.name}).
+  </p>
+
+  <h2>Quanta parte del pieno va in imposte</h2>
+  <p>
+    Su un pieno da 50 litri di benzina, {euro(compB.imposte * 50)} euro sono accisa e IVA: il
+    {perc(compB.quotaImposte)}% del totale. Su 50 litri di gasolio le imposte valgono {euro(compG.imposte * 50)} euro, il
+    {perc(compG.quotaImposte)}%.
+  </p>
+  <p class="guida-nota">
+    Il calcolo usa l'aliquota piena dell'accisa, verificata il {dataLunga(DATA_VERIFICA)}. I dettagli sono nella guida
+    sulle <a href="/guide/accise-benzina-gasolio/">accise</a>.
+  </p>
+
+  {gpl && (
+    <>
+      <h2>E con il GPL?</h2>
+      <p>
+        Il GPL costa in media {prezzo(gpl.avg)} euro al litro: 40 litri costano {euro(gpl.avg * 40)} euro. Il serbatoio
+        del GPL e i consumi sono però diversi da quelli della benzina, quindi i due pieni non si confrontano
+        direttamente. Tutti i numeri sono nella guida sul <a href="/guide/gpl-auto-prezzo/">GPL per auto</a>.
+      </p>
+    </>
+  )}
+
+  <h2>Come spendere meno</h2>
+  <ul>
+    <li>Scegli il self service: la differenza con il servito è spiegata nella guida <a href="/guide/self-o-servito/">self o servito</a>.</li>
+    <li>Confronta i distributori della tua zona prima di fare rifornimento, partendo dalla tua <a href="/prezzi-carburanti/province/">provincia</a>.</li>
+    <li>In viaggio controlla in anticipo i <a href="/guide/prezzi-carburanti-in-autostrada/">prezzi in autostrada</a>.</li>
+  </ul>
+</GuidaLayout>

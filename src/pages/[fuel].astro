@@ -4,7 +4,7 @@ import PrezziLayout from '../layouts/PrezziLayout.astro';
 import FAQ from '../components/FAQ.astro';
 import {
   FUELS, FUEL_KEYS, getMeta, getNazionale, getRegioni, getProvince, getComuni, getMarche,
-  prezzo, diffCent, euro, numero, dataLunga, modo, type FuelKey,
+  prezzo, diffCent, euro, numero, dataCon, modo, type FuelKey,
 } from '../lib/fuel';
 import { SITE } from '../config/site';
 
@@ -48,7 +48,7 @@ const quota = Math.round((n.n / meta.totalStations) * 100);
 const faq = [
   {
     question: `Quanto costa ${il} oggi in Italia?`,
-    answer: `Il ${dataLunga(meta.lastUpdate)} il prezzo medio ${del}${mdSelf} è di ${prezzo(n.avg)} ${fuel.unit}${scartoServito ? `, quello del servito di ${prezzo(n.servito)} ${fuel.unit}` : ''}. I prezzi vanno da ${prezzo(n.min)} a ${prezzo(n.max)} ${fuel.unit} a seconda dell'impianto (${numero(n.n)} distributori).`,
+    answer: `${dataCon('il', meta.lastUpdate, true)} il prezzo medio ${del}${mdSelf} è di ${prezzo(n.avg)} ${fuel.unit}${scartoServito ? `, quello del servito di ${prezzo(n.servito)} ${fuel.unit}` : ''}. I prezzi vanno da ${prezzo(n.min)} a ${prezzo(n.max)} ${fuel.unit} a seconda dell'impianto (${numero(n.n)} distributori).`,
   },
   regioni.length > 1 && {
     question: `In quale regione ${il} costa meno?`,

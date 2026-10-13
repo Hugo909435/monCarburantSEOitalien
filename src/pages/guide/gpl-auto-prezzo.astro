@@ -1,0 +1,94 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, getMeta, prezzo, euro, numero } from '../../lib/fuel';
+import { cent, perc, intervallo90, delRegione } from '../../lib/guide';
+
+const naz = getNazionale();
+const meta = getMeta();
+const gpl = naz.stats.gpl!;
+const benzina = naz.stats.benzina!;
+const quotaImpianti = gpl.n / meta.totalStations;
+const range = intervallo90('gpl');
+
+const regioni = getRegioni()
+  .map((r) => ({ name: r.name, slug: r.slug, n: r.stats.gpl?.n ?? 0, avg: r.stats.gpl?.avg ?? null, count: r.count }))
+  .sort((x, y) => y.n - x.n);
+const conPrezzo = regioni.filter((r) => r.avg != null && r.n >= 5).sort((x, y) => x.avg! - y.avg!);
+const rMin = conPrezzo[0];
+const rMax = conPrezzo[conPrezzo.length - 1];
+
+const aut = naz.autostrada.autostrada.gpl;
+const str = naz.autostrada.strada.gpl;
+
+// Sigla LPG sulle etichette europee: miolegale.it e money.it, lette il 13 ottobre 2026.
+const fonti = [
+  { label: 'MioLegale, «Nuove sigle carburanti: la direttiva DAFI»', url: 'https://miolegale.it/notizie/nuove-sigle-carburanti-direttiva-dafi/' },
+  { label: 'Money.it, «Carburanti, nuovi nomi ed etichette»', url: 'https://www.money.it/Carburanti-nuovi-nomi-etichette-UE-simboli-benzina-gasolio-e-gas' },
+];
+---
+
+<GuidaLayout slug="gpl-auto-prezzo" fonti={fonti}>
+  <h2>Quanto costa il GPL oggi</h2>
+  <p>
+    Il prezzo medio nazionale del GPL per auto è di {prezzo(gpl.avg)} euro al litro. Lo vendono {numero(gpl.n)} distributori:
+    nove su dieci a un prezzo compreso tra {prezzo(range.da)} e {prezzo(range.a)} euro al litro.
+  </p>
+  <p>
+    Un litro di GPL costa oggi il {perc(gpl.avg / benzina.avg)}% di un litro di benzina. Attenzione però: il confronto
+    al litro non basta per calcolare il risparmio, perché un'auto non consuma gli stessi litri con i due carburanti.
+    Per un confronto corretto usa i consumi indicati dal costruttore per il tuo modello.
+  </p>
+
+  <h2>Quanti distributori lo vendono</h2>
+  <p>
+    Il GPL non si trova ovunque: lo vende il {perc(quotaImpianti)}% dei {numero(meta.totalStations)} distributori presenti
+    nei dati di oggi. Sulla pompa è indicato dall'etichetta europea a forma di rombo con la sigla LPG: le sigle sono
+    spiegate nella guida sulle <a href="/guide/etichette-carburanti-e5-e10-b7/">etichette dei carburanti</a>.
+  </p>
+
+  <h2>Prezzo e distributori regione per regione</h2>
+  <p>
+    Il numero più alto di distributori di GPL è quello {delRegione(regioni[0].name)} ({numero(regioni[0].n)}). Tra le regioni
+    con almeno cinque impianti, il prezzo medio più basso è quello {delRegione(rMin.name)} ({prezzo(rMin.avg)} euro al
+    litro), il più alto quello {delRegione(rMax.name)} ({prezzo(rMax.avg)} euro al litro): {cent(rMax.avg! - rMin.avg!)} centesimi
+    di differenza.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Regione</th><th class="num">Distributori con GPL</th><th class="num">Su tutti gli impianti</th><th class="num">Prezzo medio (€/L)</th></tr>
+      </thead>
+      <tbody>
+        {regioni.map((r) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+            <td class="num">{numero(r.n)}</td>
+            <td class="num">{perc(r.n / r.count)}%</td>
+            <td class="num">{r.avg != null ? prezzo(r.avg) : '–'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {aut && str && (
+    <>
+      <h2>In autostrada</h2>
+      <p>
+        Nelle aree di servizio autostradali il GPL costa in media {prezzo(aut.avg)} euro al litro, contro
+        {prezzo(str.avg)} euro al litro sulla rete ordinaria:
+        {Math.abs(aut.avg - str.avg) < 0.0005
+          ? ' i due prezzi sono in linea.'
+          : ` ${cent(aut.avg - str.avg)} centesimi ${aut.avg > str.avg ? 'in più' : 'in meno'}, cioè ${euro(Math.abs(aut.avg - str.avg) * 40)} euro su 40 litri.`}
+      </p>
+    </>
+  )}
+
+  <h2>Dove trovare il GPL più economico</h2>
+  <p>
+    La pagina <a href="/prezzo-gpl/">prezzo del GPL</a> riporta la media di oggi e i distributori più economici. Nelle
+    pagine di ogni <a href="/prezzi-carburanti/province/">provincia</a> puoi ordinare gli impianti per prezzo del GPL e
+    vederli sulla mappa. Se guidi un'auto a gas naturale, c'è la guida sul
+    <a href="/guide/metano-auto-prezzo/">metano per auto</a>.
+  </p>
+</GuidaLayout>

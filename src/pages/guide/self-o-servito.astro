@@ -1,0 +1,114 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, prezzo, euro } from '../../lib/fuel';
+import { cent } from '../../lib/guide';
+
+const naz = getNazionale();
+const b = naz.stats.benzina!;
+const g = naz.stats.gasolio!;
+const gapB = b.servito! - b.avg;
+const gapG = g.servito! - g.avg;
+
+// Regioni ordinate per differenza servito-self sulla benzina, dalla più alta.
+const regioni = getRegioni()
+  .filter((r) => r.stats.benzina?.servito != null && r.stats.gasolio?.servito != null)
+  .map((r) => ({
+    name: r.name,
+    slug: r.slug,
+    self: r.stats.benzina!.avg,
+    servito: r.stats.benzina!.servito!,
+    gap: r.stats.benzina!.servito! - r.stats.benzina!.avg,
+    gapG: r.stats.gasolio!.servito! - r.stats.gasolio!.avg,
+  }))
+  .sort((x, y) => y.gap - x.gap);
+const max = regioni[0];
+const min = regioni[regioni.length - 1];
+
+const aut = naz.autostrada.autostrada.benzina;
+const str = naz.autostrada.strada.benzina;
+const gapAut = aut?.servito != null ? aut.servito - aut.avg : null;
+const gapStr = str?.servito != null ? str.servito - str.avg : null;
+
+// Regola sulla comunicazione dei prezzi self e servito: fiscoetasse.com
+// (rassegna-stampa/34062) e leggioggi.it (?p=79824), lette il 13 ottobre 2026.
+const fonti = [
+  { label: 'Fisco e Tasse, «Obbligo comunicazione prezzi carburanti dal 24 luglio: come fare e chiarimenti del MIMIT»', url: 'https://www.fiscoetasse.com/rassegna-stampa/34062-obbligo-comunicazione-prezzi-carburanti-dal-24-luglio-come-fare-e-chiarimenti-del-mimit.html' },
+  { label: 'LeggiOggi, «Prezzi carburante: obbligo comunicazione dal 24 luglio»', url: 'https://www.leggioggi.it/?p=79824' },
+];
+---
+
+<GuidaLayout slug="self-o-servito" fonti={fonti}>
+  <h2>Due prezzi per lo stesso carburante</h2>
+  <p>
+    In molti distributori lo stesso carburante ha due prezzi. In <strong>self service</strong> fai rifornimento da
+    solo; in <strong>servito</strong> lo fa un addetto, e il litro costa di più.
+  </p>
+
+  <h2>Quanto costa la differenza oggi</h2>
+  <div class="pp-facts">
+    <div class="pp-fact">
+      <span class="pp-fact-label">Benzina</span>
+      <span class="pp-fact-value">+{cent(gapB)} cent al litro</span>
+      <span class="pp-fact-note">Self {prezzo(b.avg)} €/L · servito {prezzo(b.servito)} €/L</span>
+    </div>
+    <div class="pp-fact">
+      <span class="pp-fact-label">Gasolio</span>
+      <span class="pp-fact-value">+{cent(gapG)} cent al litro</span>
+      <span class="pp-fact-note">Self {prezzo(g.avg)} €/L · servito {prezzo(g.servito)} €/L</span>
+    </div>
+  </div>
+  <p>
+    Su un pieno da 50 litri, scegliere il servito costa in media {euro(gapB * 50)} euro in più per la benzina e
+    {euro(gapG * 50)} euro in più per il gasolio.
+  </p>
+
+  <h2>La differenza regione per regione</h2>
+  <p>
+    La distanza tra i due prezzi non è la stessa ovunque. Per la benzina va da {cent(min.gap)} centesimi al litro
+    ({min.name}) a {cent(max.gap)} centesimi ({max.name}).
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th>Regione</th><th class="num">Benzina self</th><th class="num">Benzina servito</th>
+          <th class="num">Differenza benzina</th><th class="num">Differenza gasolio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {regioni.map((r) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+            <td class="num">{prezzo(r.self)}</td>
+            <td class="num">{prezzo(r.servito)}</td>
+            <td class="num">+{cent(r.gap)} cent</td>
+            <td class="num">+{cent(r.gapG)} cent</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {gapAut != null && gapStr != null && (
+    <>
+      <h2>In autostrada</h2>
+      <p>
+        Nelle aree di servizio autostradali la differenza tra servito e self per la benzina è di {cent(gapAut)} centesimi
+        al litro, contro {cent(gapStr)} centesimi sulla rete ordinaria. Il confronto completo è nella guida
+        sui <a href="/guide/prezzi-carburanti-in-autostrada/">prezzi in autostrada</a>.
+      </p>
+    </>
+  )}
+
+  <h2>Come leggere questi numeri</h2>
+  <p>
+    I gestori devono comunicare al Ministero il prezzo self service. Quando un impianto vende in entrambe le modalità,
+    comunicare anche il prezzo servito è facoltativo; se vende solo in servito, comunica quel prezzo.
+  </p>
+  <p>
+    Per questo la media del servito è calcolata solo sugli impianti che lo comunicano, mentre quella del self riguarda
+    tutti gli impianti con il self service. Le due medie non si riferiscono quindi esattamente agli stessi
+    distributori: per il confronto preciso guarda i due prezzi dello stesso impianto, nelle pagine della tua
+    <a href="/prezzi-carburanti/province/">provincia</a>.
+  </p>
+</GuidaLayout>

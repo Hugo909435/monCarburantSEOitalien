@@ -1,0 +1,118 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, getProvince, prezzo, euro, diffCent } from '../../lib/fuel';
+import { cent, delRegione } from '../../lib/guide';
+
+const naz = getNazionale().stats;
+const regioni = getRegioni()
+  .filter((r) => r.stats.benzina && r.stats.gasolio)
+  .sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+const rMin = regioni[0];
+const rMax = regioni[regioni.length - 1];
+const scartoRegioni = rMax.stats.benzina!.avg - rMin.stats.benzina!.avg;
+
+const province = getProvince()
+  .filter((p) => p.stats.benzina && p.stats.gasolio && !p.stats.benzina.soloServito)
+  .sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+const menoCare = province.slice(0, 10);
+const piuCare = province.slice(-10).reverse();
+const pMin = province[0];
+const pMax = province[province.length - 1];
+// Livigno (provincia di Sondrio) è zona extradoganale: i suoi prezzi abbassano
+// la media provinciale. Fonte: comunicato ADM del 5 ottobre 2023 («zona
+// extra-doganale di Livigno»), letto il 13 ottobre 2026.
+const sondrioInTesta = menoCare.some((p) => p.sigla === 'SO');
+---
+
+<GuidaLayout
+  slug="dove-costa-meno-la-benzina"
+  fonti={sondrioInTesta ? [{ label: 'Agenzia delle Dogane e dei Monopoli, comunicato del 5 ottobre 2023 sulla zona extradoganale di Livigno', url: 'https://www.adm.gov.it/portale/documents/20182/136620407/CS-20231005-Tirano.pdf/41b86bea-b5d9-09f9-ceb3-d58f6f94b5c4' }] : []}
+>
+  <h2>La risposta di oggi</h2>
+  <p>
+    Oggi, tra le regioni, il prezzo medio della benzina più basso è quello
+    <a href={`/prezzi-carburanti/regione/${rMin.slug}/`}>{delRegione(rMin.name)}</a>, con {prezzo(rMin.stats.benzina!.avg)} euro al
+    litro in self service. Il più alto è quello
+    <a href={`/prezzi-carburanti/regione/${rMax.slug}/`}>{delRegione(rMax.name)}</a>, con {prezzo(rMax.stats.benzina!.avg)} euro al
+    litro. La media nazionale è di {prezzo(naz.benzina!.avg)} euro al litro.
+  </p>
+  <p>
+    Tra la prima e l'ultima regione ci sono {cent(scartoRegioni)} centesimi al litro: {euro(scartoRegioni * 50)} euro su un
+    pieno da 50 litri.
+  </p>
+
+  <h2>La classifica delle regioni</h2>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Regione</th><th class="num">Benzina self</th><th class="num">Rispetto alla media</th><th class="num">Gasolio self</th></tr>
+      </thead>
+      <tbody>
+        {regioni.map((r, i) => (
+          <tr>
+            <td>{i + 1}. <a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+            <td class="num">{prezzo(r.stats.benzina!.avg)}</td>
+            <td class="num">{diffCent(r.stats.benzina!.avg, naz.benzina!.avg)}</td>
+            <td class="num">{prezzo(r.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Le dieci province meno care</h2>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Provincia</th><th>Regione</th><th class="num">Benzina self</th><th class="num">Gasolio self</th></tr>
+      </thead>
+      <tbody>
+        {menoCare.map((p) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a></td>
+            <td>{p.regione}</td>
+            <td class="num">{prezzo(p.stats.benzina!.avg)}</td>
+            <td class="num">{prezzo(p.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  {sondrioInTesta && (
+    <p class="guida-nota">
+      La provincia di Sondrio comprende Livigno, che è zona extradoganale: lì i carburanti hanno un regime fiscale
+      diverso dal resto d'Italia e i prezzi molto bassi abbassano la media provinciale.
+    </p>
+  )}
+
+  <h2>Le dieci province più care</h2>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Provincia</th><th>Regione</th><th class="num">Benzina self</th><th class="num">Gasolio self</th></tr>
+      </thead>
+      <tbody>
+        {piuCare.map((p) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/provincia/${p.slug}/`}>{p.name}</a></td>
+            <td>{p.regione}</td>
+            <td class="num">{prezzo(p.stats.benzina!.avg)}</td>
+            <td class="num">{prezzo(p.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Tra la provincia meno cara ({pMin.name}) e la più cara ({pMax.name}) la differenza è di
+    {cent(pMax.stats.benzina!.avg - pMin.stats.benzina!.avg)} centesimi al litro.
+  </p>
+
+  <h2>Oltre la regione: il singolo distributore</h2>
+  <p>
+    Le classifiche di questa pagina confrontano delle medie. Anche dentro la stessa città, però, i prezzi cambiano
+    da un distributore all'altro: lo misuriamo nella guida su <a href="/guide/risparmiare-confrontando-i-distributori/">quanto si risparmia
+    confrontando i distributori</a>. Per i prezzi della tua zona parti dall'elenco
+    delle <a href="/prezzi-carburanti/province/">province</a>.
+  </p>
+</GuidaLayout>

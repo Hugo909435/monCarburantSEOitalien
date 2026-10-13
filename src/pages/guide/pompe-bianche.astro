@@ -1,0 +1,93 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getMarche, getMeta, prezzo, numero } from '../../lib/fuel';
+import { cent, perc, intervallo90 } from '../../lib/guide';
+
+const naz = getNazionale().stats;
+const meta = getMeta();
+const marche = getMarche();
+const bianche = marche.find((m) => m.slug === 'pompe-bianche')!;
+const pb = bianche.stats.benzina!;
+const pg = bianche.stats.gasolio!;
+const quotaRete = bianche.count / meta.totalStations;
+const range = intervallo90('benzina', (s) => s.marcaSlug === 'pompe-bianche');
+
+// Confronto con i marchi delle compagnie che hanno almeno 1.000 impianti.
+const grandi = marche
+  .filter((m) => m.slug !== 'pompe-bianche' && m.slug !== 'altri-marchi' && m.count >= 1000 && m.stats.benzina && m.stats.gasolio)
+  .sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+const righe = [...grandi.map((m) => ({ m, bianca: false })), { m: bianche, bianca: true }].sort(
+  (x, y) => x.m.stats.benzina!.avg - y.m.stats.benzina!.avg,
+);
+const posizione = righe.findIndex((r) => r.bianca) + 1;
+
+const scarto = (v: number, ref: number) =>
+  Math.abs(v - ref) < 0.0005 ? 'in linea con la' : `${cent(v - ref)} centesimi ${v > ref ? 'sopra la' : 'sotto la'}`;
+
+// Definizione di pompa bianca e qualità del carburante: sicurauto.it e
+// alvolante.it, lette il 13 ottobre 2026.
+const fonti = [
+  { label: 'SicurAUTO, «Pompe bianche: dove sono e come trovarle»', url: 'https://www.sicurauto.it/news/pompe-bianche-dove-sono-e-come-trovarle/' },
+  { label: 'alVolante, «Pompe bianche: cosa sono e dove trovarle»', url: 'https://www.alvolante.it/da_sapere/vivere-l-auto/pompe-bianche-cosa-sono-e-dove-trovarle-379754' },
+];
+---
+
+<GuidaLayout slug="pompe-bianche" fonti={fonti}>
+  <h2>Cosa sono le pompe bianche</h2>
+  <p>
+    Le pompe bianche, chiamate anche distributori «no logo», sono impianti indipendenti che non espongono il marchio
+    di una grande compagnia petrolifera. Di solito le gestisce un imprenditore privato, spesso presente in una sola
+    provincia o regione.
+  </p>
+  <p>
+    Il carburante che vendono deve rispettare le stesse norme di qualità di quello dei grandi marchi ed è sottoposto
+    agli stessi controlli.
+  </p>
+
+  <h2>Quante sono</h2>
+  <p>
+    Nei dati di oggi i distributori che il gestore ha dichiarato al Ministero come «Pompe Bianche» sono
+    {numero(bianche.count)}, cioè il {perc(quotaRete)}% dei {numero(meta.totalStations)} impianti con almeno un prezzo valido.
+  </p>
+
+  <h2>Costano davvero meno?</h2>
+  <p>
+    Le pompe bianche hanno fama di essere più economiche. Sui prezzi di oggi, in modalità self service, la loro media
+    è di {prezzo(pb.avg)} euro al litro per la benzina, {scarto(pb.avg, naz.benzina!.avg)} media nazionale, e di
+    {prezzo(pg.avg)} euro al litro per il gasolio, {scarto(pg.avg, naz.gasolio!.avg)} media nazionale.
+  </p>
+  <p>
+    Messe a confronto con i marchi che hanno almeno mille impianti, le pompe bianche sono oggi al {posizione}° posto su
+    {righe.length} per prezzo medio della benzina, partendo dal più basso.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Rete</th><th class="num">Impianti</th><th class="num">Benzina self</th><th class="num">Gasolio self</th></tr>
+      </thead>
+      <tbody>
+        {righe.map(({ m, bianca }) => (
+          <tr>
+            <td>{bianca ? <strong>{m.name}</strong> : <a href={`/prezzi-carburanti/marca/${m.slug}/`}>{m.name}</a>}</td>
+            <td class="num">{numero(m.count)}</td>
+            <td class="num">{prezzo(m.stats.benzina!.avg)}</td>
+            <td class="num">{prezzo(m.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>La media dice poco: conta il singolo impianto</h2>
+  <p>
+    Le pompe bianche non sono una rete unica: sono migliaia di gestori diversi, ognuno con i propri prezzi. Per questo
+    i prezzi non sono uniformi: oggi nove pompe bianche su dieci vendono la benzina in self a un prezzo
+    compreso tra {prezzo(range.da)} e {prezzo(range.a)} euro al litro.
+  </p>
+  <p>
+    Una pompa bianca può quindi essere il distributore più conveniente della zona oppure uno dei più cari. L'unico
+    modo per saperlo è confrontare i prezzi impianto per impianto: trovi l'elenco completo nella pagina
+    delle <a href="/prezzi-carburanti/marca/pompe-bianche/">pompe bianche</a> e il confronto tra tutte le reti nella guida
+    sui <a href="/guide/marchi-carburante-prezzi/">marchi di carburante</a>.
+  </p>
+</GuidaLayout>

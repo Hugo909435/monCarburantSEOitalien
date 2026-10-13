@@ -1,0 +1,92 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, prezzo, euro, dataLunga } from '../../lib/fuel';
+import { composizione, perc } from '../../lib/guide';
+import { ACCISA, IVA, DATA_VERIFICA } from '../../config/fisco';
+
+const naz = getNazionale().stats;
+const b = { p: naz.benzina!.avg, ...composizione(naz.benzina!.avg) };
+const g = { p: naz.gasolio!.avg, ...composizione(naz.gasolio!.avg) };
+
+// Effetto di un calo del 10% del solo prezzo industriale della benzina.
+const dopoCalo = (b.industriale * 0.9 + ACCISA) * (1 + IVA);
+const caloPompa = (b.p - dopoCalo) / b.p;
+
+// Fonti: vedi src/config/fisco.ts (lette il 13 ottobre 2026).
+const fonti = [
+  { label: 'Quotidiano Motori, «Accise carburanti 2026: quanto si paga su benzina e gasolio»', url: 'https://www.quotidianomotori.com/automobili/accise-carburanti/' },
+  { label: 'Sbircia la Notizia, «Gasolio ad accisa piena, resta da decidere il nuovo taglio» (8 ottobre 2026)', url: 'https://www.sbircialanotizia.it/articoli/2026/10/08/gasolio-accise-hobrl/' },
+  { label: 'Teleborsa, «Da che cosa dipende il prezzo della benzina» (10 aprile 2026)', url: 'https://www.teleborsa.it/Guide/2026/04/10/da-che-cosa-dipende-il-prezzo-della-benzina-1.html' },
+  { label: 'Rivaluta.it, «Accise, IVA e prezzo netto dei carburanti» (dati MASE)', url: 'https://www.rivaluta.it/prezzi/prezzi-carburanti-accise-iva-netto.asp' },
+];
+---
+
+<GuidaLayout slug="accise-benzina-gasolio" fonti={fonti}>
+  <h2>Che cos'è l'accisa</h2>
+  <p>
+    L'accisa è un'imposta che si paga su ogni litro di carburante. È una somma fissa: non cambia quando il prezzo del
+    petrolio sale o scende. Per questo pesa di più, in proporzione, quando il carburante costa poco.
+  </p>
+  <p>
+    Sopra l'accisa si paga anche l'IVA al 22%, che si calcola sulla somma del prezzo industriale e dell'accisa. In
+    pratica una parte dell'IVA è un'imposta su un'altra imposta.
+  </p>
+
+  <h2>Quanto vale l'accisa</h2>
+  <p>
+    L'aliquota piena è di 672,90 euro ogni mille litri, cioè {euro(ACCISA * 100)} centesimi al litro. Con l'IVA diventano
+    {euro(ACCISA * (1 + IVA) * 100)} centesimi al litro.
+  </p>
+  <p>
+    Dal 1° gennaio 2026 l'aliquota è la stessa per la benzina e per il gasolio usato come carburante. Fino al 2025 il
+    gasolio pagava un'accisa più bassa di quella della benzina.
+  </p>
+
+  <h2>Quanto pesano le imposte sul prezzo di oggi</h2>
+  <p>
+    Abbiamo applicato l'aliquota piena al prezzo medio nazionale in modalità self service. Su un litro di benzina le
+    imposte valgono {prezzo(b.imposte)} euro, cioè il {perc(b.quotaImposte)}% di quello che paghi alla pompa; su un litro di
+    gasolio {prezzo(g.imposte)} euro, il {perc(g.quotaImposte)}%.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Voce (€/L)</th><th class="num">Benzina</th><th class="num">Gasolio</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Prezzo industriale</td><td class="num">{prezzo(b.industriale)}</td><td class="num">{prezzo(g.industriale)}</td></tr>
+        <tr><td>Accisa</td><td class="num">{prezzo(b.accisa)}</td><td class="num">{prezzo(g.accisa)}</td></tr>
+        <tr><td>IVA (22%)</td><td class="num">{prezzo(b.iva)}</td><td class="num">{prezzo(g.iva)}</td></tr>
+        <tr><td><strong>Prezzo medio alla pompa</strong></td><td class="num"><strong>{prezzo(b.p)}</strong></td><td class="num"><strong>{prezzo(g.p)}</strong></td></tr>
+        <tr><td>Totale imposte</td><td class="num">{prezzo(b.imposte)}</td><td class="num">{prezzo(g.imposte)}</td></tr>
+        <tr><td>Quota di imposte sul prezzo</td><td class="num">{perc(b.quotaImposte)}%</td><td class="num">{perc(g.quotaImposte)}%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="guida-nota">
+    Il calcolo usa l'aliquota piena, verificata il {dataLunga(DATA_VERIFICA)}. Se un decreto riduce l'accisa per un periodo,
+    la quota di imposte reale è più bassa di quella indicata qui finché lo sconto resta in vigore.
+  </p>
+
+  <h2>I tagli temporanei del 2026</h2>
+  <p>
+    Il governo può ridurre l'accisa per un periodo limitato con un decreto. Nel 2026 è successo più volte: dal 19 marzo
+    la riduzione è stata di 20 centesimi al litro, poi è stata abbassata per gradi.
+  </p>
+  <p>
+    L'ultimo sconto riguardava solo il gasolio, valeva 5 centesimi al litro ed è terminato il 5 ottobre 2026. Dal
+    6 ottobre benzina e gasolio pagano di nuovo l'aliquota piena.
+  </p>
+
+  <h2>Perché il prezzo alla pompa scende meno del petrolio</h2>
+  <p>
+    Poiché l'accisa è fissa, solo una parte del prezzo segue il mercato. Un esempio sul prezzo di oggi: se il prezzo
+    industriale della benzina scendesse del 10%, il prezzo alla pompa passerebbe da {prezzo(b.p)} a {prezzo(dopoCalo)} euro
+    al litro. Il calo sarebbe del {perc(caloPompa)}%, non del 10%.
+  </p>
+  <p>
+    Per vedere le tre voci del prezzo una per una, leggi
+    <a href="/guide/come-si-forma-il-prezzo-della-benzina/">come si forma il prezzo della benzina</a>. I prezzi medi di oggi
+    sono nelle pagine <a href="/prezzo-benzina/">prezzo della benzina</a> e <a href="/prezzo-gasolio/">prezzo del gasolio</a>.
+  </p>
+</GuidaLayout>

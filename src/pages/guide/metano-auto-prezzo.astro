@@ -1,0 +1,109 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, getMeta, prezzo, numero } from '../../lib/fuel';
+import { cent, perc, intervallo90, delRegione } from '../../lib/guide';
+
+const naz = getNazionale();
+const meta = getMeta();
+const metano = naz.stats.metano!;
+const quotaImpianti = metano.n / meta.totalStations;
+const range = intervallo90('metano');
+
+const regioni = getRegioni()
+  .map((r) => ({ name: r.name, slug: r.slug, n: r.stats.metano?.n ?? 0, avg: r.stats.metano?.avg ?? null }))
+  .sort((x, y) => y.n - x.n);
+const senza = regioni.filter((r) => r.n === 0);
+const conPrezzo = regioni.filter((r) => r.avg != null && r.n >= 5).sort((x, y) => x.avg! - y.avg!);
+const rMin = conPrezzo[0];
+const rMax = conPrezzo[conPrezzo.length - 1];
+const elenco = (nomi: string[]) => (nomi.length <= 1 ? nomi.join('') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`);
+
+// Revisione delle bombole, fonti lette il 13 ottobre 2026: sicurauto.it (decreto
+// MIMS del 13 maggio 2022: CNG4 ogni quattro anni su M1 e N1, prima ogni due;
+// vita massima 20 anni), autosupermarket.it (stesse regole) e it.motor1.com
+// (R110 ogni quattro anni, vita massima 20 anni). Il giorno esatto di entrata
+// in vigore non coincide tra le fonti (13 o 14 luglio 2022): la pagina indica
+// solo «luglio 2022». Sigla CNG sulle etichette europee: miolegale.it e money.it.
+const fonti = [
+  { label: 'SicurAUTO, «Revisione bombole metano: cosa prevede il nuovo decreto 13/5/2022»', url: 'https://www.sicurauto.it/news/revisione-bombole-metano-cosa-prevede-il-nuovo-decreto-13-5-2022/' },
+  { label: 'Autosupermarket, «Revisione bombole metano auto: regole, costi e manutenzione»', url: 'https://autosupermarket.it/magazine/officina/revisione-bombole-metano-auto-2025-regole-costi-e-manutenzione-completa' },
+  { label: 'Motor1, «Tutto sulla revisione delle bombole di metano»', url: 'https://it.motor1.com/news/219760/tutto-sulla-revisione-delle-bombole-di-metano/' },
+  { label: 'MioLegale, «Nuove sigle carburanti: la direttiva DAFI»', url: 'https://miolegale.it/notizie/nuove-sigle-carburanti-direttiva-dafi/' },
+];
+---
+
+<GuidaLayout slug="metano-auto-prezzo" fonti={fonti}>
+  <h2>Quanto costa il metano oggi</h2>
+  <p>
+    Il metano per auto si vende al chilogrammo, non al litro. Il prezzo medio nazionale è di {prezzo(metano.avg)} euro al
+    chilo. Lo vendono {numero(metano.n)} distributori: nove su dieci a un prezzo compreso tra {prezzo(range.da)} e
+    {prezzo(range.a)} euro al chilo.
+  </p>
+  <p>
+    Proprio perché l'unità di misura è diversa, il prezzo al chilo del metano non si può confrontare direttamente con
+    il prezzo al litro di benzina, gasolio o GPL.
+  </p>
+
+  <h2>Pochi distributori, distribuiti in modo diseguale</h2>
+  <p>
+    Il metano è il carburante più difficile da trovare tra i quattro che confrontiamo: lo vende il
+    {perc(quotaImpianti)}% dei {numero(meta.totalStations)} distributori presenti nei dati di oggi. Il numero più alto
+    è quello {delRegione(regioni[0].name)}, con {numero(regioni[0].n)} impianti.
+    {senza.length === 1 && ` In una regione nessun distributore comunica un prezzo del metano: ${senza[0].name}.`}
+    {senza.length > 1 && ` In ${senza.length} regioni nessun distributore comunica un prezzo del metano: ${elenco(senza.map((r) => r.name))}.`}
+  </p>
+  <p>
+    Tra le regioni con almeno cinque impianti, il prezzo medio più basso è quello {delRegione(rMin.name)} ({prezzo(rMin.avg)} euro
+    al chilo), il più alto quello {delRegione(rMax.name)} ({prezzo(rMax.avg)} euro al chilo): {cent(rMax.avg! - rMin.avg!)} centesimi
+    di differenza.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Regione</th><th class="num">Distributori di metano</th><th class="num">Prezzo medio (€/kg)</th></tr>
+      </thead>
+      <tbody>
+        {regioni.map((r) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+            <td class="num">{numero(r.n)}</td>
+            <td class="num">{r.avg != null ? prezzo(r.avg) : '–'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Come riconoscerlo alla pompa</h2>
+  <p>
+    Sulle etichette europee dei carburanti il metano per auto è indicato dalla sigla CNG (gas naturale compresso),
+    dentro un rombo. Il significato di tutte le sigle è nella guida
+    sulle <a href="/guide/etichette-carburanti-e5-e10-b7/">etichette dei carburanti</a>.
+  </p>
+
+  <h2>La revisione delle bombole</h2>
+  <p>
+    Le bombole del metano hanno una scadenza propria, distinta dalla revisione periodica dell'auto. Per le bombole
+    omologate secondo il regolamento ECE/ONU R110:
+  </p>
+  <ul>
+    <li>
+      le bombole di tipo CNG4, in materiale composito, si revisionano ogni quattro anni sulle auto e sui veicoli
+      commerciali leggeri, salvo diversa indicazione del costruttore. Prima di luglio 2022 la scadenza era ogni due
+      anni;
+    </li>
+    <li>le bombole di tipo CNG1, CNG2 e CNG3 si revisionano ogni quattro anni;</li>
+    <li>la durata massima di una bombola è quella indicata dal suo costruttore e non può superare i vent'anni.</li>
+  </ul>
+  <p>
+    Il tipo di bombola è indicato sulla sua targhetta. Per la scadenza esatta della tua auto fai riferimento ai
+    documenti del veicolo o a un'officina autorizzata.
+  </p>
+
+  <h2>Dove trovare il metano più economico</h2>
+  <p>
+    La pagina <a href="/prezzo-metano/">prezzo del metano</a> riporta la media di oggi e i distributori più economici;
+    nelle pagine di ogni <a href="/prezzi-carburanti/province/">provincia</a> puoi ordinare gli impianti per prezzo del
+    metano. Per l'altro gas per auto c'è la guida sul <a href="/guide/gpl-auto-prezzo/">GPL</a>.
+  </p>
+</GuidaLayout>

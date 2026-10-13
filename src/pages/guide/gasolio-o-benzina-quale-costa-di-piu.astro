@@ -1,0 +1,140 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getRegioni, getStorico, prezzo, euro, dataLunga, dataCon } from '../../lib/fuel';
+import { composizione, cent } from '../../lib/guide';
+import { DATA_VERIFICA } from '../../config/fisco';
+
+const naz = getNazionale().stats;
+const b = naz.benzina!.avg;
+const g = naz.gasolio!.avg;
+const diff = g - b;
+const pari = Math.abs(diff) < 0.0005;
+const caro = diff > 0 ? 'gasolio' : 'benzina';
+const economico = diff > 0 ? 'benzina' : 'gasolio';
+const articolo = (f: string) => (f === 'gasolio' ? 'il gasolio' : 'la benzina');
+const cb = composizione(b);
+const cg = composizione(g);
+
+const regioni = getRegioni()
+  .filter((r) => r.stats.benzina && r.stats.gasolio)
+  .map((r) => ({ name: r.name, slug: r.slug, b: r.stats.benzina!.avg, g: r.stats.gasolio!.avg, d: r.stats.gasolio!.avg - r.stats.benzina!.avg }))
+  .sort((x, y) => y.d - x.d);
+const gasolioPiuCaro = regioni.filter((r) => r.d > 0.0005).length;
+
+// Andamento registrato dal sito: una riga per giorno di aggiornamento.
+const storico = getStorico().filter((s) => s.benzina != null && s.gasolio != null);
+
+// Fonti: vedi src/config/fisco.ts (lette il 13 ottobre 2026).
+const fonti = [
+  { label: 'Quotidiano Motori, «Accise carburanti 2026: quanto si paga su benzina e gasolio»', url: 'https://www.quotidianomotori.com/automobili/accise-carburanti/' },
+  { label: 'Sbircia la Notizia, «Gasolio ad accisa piena, resta da decidere il nuovo taglio» (8 ottobre 2026)', url: 'https://www.sbircialanotizia.it/articoli/2026/10/08/gasolio-accise-hobrl/' },
+];
+---
+
+<GuidaLayout slug="gasolio-o-benzina-quale-costa-di-piu" fonti={fonti}>
+  <h2>La risposta di oggi</h2>
+  {pari ? (
+    <p>
+      Oggi gasolio e benzina hanno lo stesso prezzo medio nazionale in self service: {prezzo(b)} euro al litro.
+    </p>
+  ) : (
+    <p>
+      Oggi costa di più {articolo(caro)}. Il prezzo medio nazionale in self service è di {prezzo(g)} euro al litro per il
+      gasolio e di {prezzo(b)} euro al litro per la benzina: {articolo(caro)} costa {cent(diff)} centesimi al litro in più,
+      cioè {euro(Math.abs(diff) * 50)} euro su un pieno da 50 litri.
+    </p>
+  )}
+  <p>
+    {gasolioPiuCaro === regioni.length
+      ? 'Il gasolio costa più della benzina in tutte le regioni.'
+      : gasolioPiuCaro === 0
+        ? 'In nessuna regione il gasolio costa più della benzina.'
+        : `Il gasolio costa più della benzina in ${gasolioPiuCaro} regioni su ${regioni.length}.`}
+  </p>
+
+  <h2>Stessa accisa dal 2026</h2>
+  <p>
+    Per molti anni il gasolio ha pagato un'accisa più bassa di quella della benzina, e questo contribuiva a tenerne il
+    prezzo più basso. Dal 1° gennaio 2026 le due aliquote sono allineate: benzina e gasolio usato come carburante pagano
+    la stessa accisa piena, 672,90 euro ogni mille litri.
+  </p>
+  <p>
+    Nel corso del 2026 il governo ha ridotto più volte le accise per decreto, per periodi limitati. L'ultimo sconto
+    riguardava solo il gasolio ed è terminato il 5 ottobre 2026: dal 6 ottobre i due carburanti pagano di nuovo la
+    stessa aliquota.
+  </p>
+
+  <h2>Da dove viene la differenza di oggi</h2>
+  <p>
+    Con la stessa accisa e la stessa IVA, la differenza di prezzo tra i due carburanti dipende dal prezzo industriale,
+    cioè dal costo del prodotto e dai margini di chi lo vende. Tolte le imposte, oggi il prezzo industriale medio è
+    di {prezzo(cg.industriale)} euro al litro per il gasolio e di {prezzo(cb.industriale)} euro al litro per la benzina.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Voce (€/L)</th><th class="num">Benzina</th><th class="num">Gasolio</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Prezzo industriale</td><td class="num">{prezzo(cb.industriale)}</td><td class="num">{prezzo(cg.industriale)}</td></tr>
+        <tr><td>Accisa</td><td class="num">{prezzo(cb.accisa)}</td><td class="num">{prezzo(cg.accisa)}</td></tr>
+        <tr><td>IVA (22%)</td><td class="num">{prezzo(cb.iva)}</td><td class="num">{prezzo(cg.iva)}</td></tr>
+        <tr><td><strong>Prezzo medio alla pompa</strong></td><td class="num"><strong>{prezzo(b)}</strong></td><td class="num"><strong>{prezzo(g)}</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="guida-nota">
+    Il calcolo usa l'aliquota piena dell'accisa, verificata il {dataLunga(DATA_VERIFICA)}.
+  </p>
+
+  <h2>La differenza regione per regione</h2>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Regione</th><th class="num">Benzina self</th><th class="num">Gasolio self</th><th class="num">Gasolio rispetto alla benzina</th></tr>
+      </thead>
+      <tbody>
+        {regioni.map((r) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/regione/${r.slug}/`}>{r.name}</a></td>
+            <td class="num">{prezzo(r.b)}</td>
+            <td class="num">{prezzo(r.g)}</td>
+            <td class="num">{Math.abs(r.d) < 0.0005 ? 'in linea' : `${r.d > 0 ? '+' : '−'}${cent(r.d)} cent`}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {storico.length >= 2 && (
+    <>
+      <h2>I prezzi medi registrati dal sito</h2>
+      <p>
+        Registriamo il prezzo medio nazionale a ogni aggiornamento dei dati, a partire {dataCon('dal', storico[0].date)}.
+      </p>
+      <div class="table-wrapper">
+        <table class="pp-table">
+          <thead>
+            <tr><th>Prezzi del</th><th class="num">Benzina self</th><th class="num">Gasolio self</th><th class="num">Differenza</th></tr>
+          </thead>
+          <tbody>
+            {storico.slice(-10).reverse().map((s) => (
+              <tr>
+                <td>{dataLunga(s.date)}</td>
+                <td class="num">{prezzo(s.benzina)}</td>
+                <td class="num">{prezzo(s.gasolio)}</td>
+                <td class="num">{Math.abs(s.gasolio! - s.benzina!) < 0.0005 ? 'in linea' : `${s.gasolio! > s.benzina! ? '+' : '−'}${cent(s.gasolio! - s.benzina!)} cent`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  )}
+
+  <p>
+    I prezzi di oggi, con i distributori più economici, sono nelle pagine
+    <a href="/prezzo-gasolio/">prezzo del gasolio</a> e <a href="/prezzo-benzina/">prezzo della benzina</a>. Per capire le
+    imposte leggi la guida sulle <a href="/guide/accise-benzina-gasolio/">accise</a>.
+  </p>
+</GuidaLayout>

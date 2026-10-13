@@ -1,0 +1,115 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getAutostrade, prezzo, euro, numero, type FuelKey } from '../../lib/fuel';
+import { cent } from '../../lib/guide';
+
+const { autostrada: aut, strada: str, countAutostrada } = getNazionale().autostrada;
+
+const confronto = (v: number, ref: number) =>
+  Math.abs(v - ref) < 0.0005 ? 'come sulla rete ordinaria' : `${cent(v - ref)} centesimi ${v > ref ? 'in più' : 'in meno'} della rete ordinaria`;
+
+// Righe della tabella: solo i prezzi presenti da entrambe le parti.
+const voci: { label: string; a: number | null | undefined; s: number | null | undefined; unit: string }[] = [
+  { label: 'Benzina self', a: aut.benzina?.avg, s: str.benzina?.avg, unit: '€/L' },
+  { label: 'Benzina servito', a: aut.benzina?.servito, s: str.benzina?.servito, unit: '€/L' },
+  { label: 'Gasolio self', a: aut.gasolio?.avg, s: str.gasolio?.avg, unit: '€/L' },
+  { label: 'Gasolio servito', a: aut.gasolio?.servito, s: str.gasolio?.servito, unit: '€/L' },
+  { label: 'GPL', a: aut.gpl?.avg, s: str.gpl?.avg, unit: '€/L' },
+  { label: 'Metano', a: aut.metano?.avg, s: str.metano?.avg, unit: '€/kg' },
+];
+const righe = voci.filter((v): v is { label: string; a: number; s: number; unit: string } => v.a != null && v.s != null);
+
+const bSelf = { a: aut.benzina!.avg, s: str.benzina!.avg };
+const bServ = aut.benzina!.servito != null && str.benzina!.servito != null ? { a: aut.benzina!.servito, s: str.benzina!.servito } : null;
+
+// Autostrade con almeno 5 aree di servizio che comunicano il prezzo della benzina.
+const fuel: FuelKey = 'benzina';
+const classifica = getAutostrade()
+  .filter((a) => (a.stats[fuel]?.n ?? 0) >= 5 && a.stats.gasolio)
+  .sort((x, y) => x.stats[fuel]!.avg - y.stats[fuel]!.avg);
+const piuBassa = classifica[0];
+const piuAlta = classifica[classifica.length - 1];
+---
+
+<GuidaLayout slug="prezzi-carburanti-in-autostrada">
+  <h2>Autostrada e rete ordinaria a confronto</h2>
+  <p>
+    Nei dati di oggi le aree di servizio autostradali con almeno un prezzo valido sono {numero(countAutostrada)}. Abbiamo
+    confrontato le loro medie con quelle di tutti gli altri distributori.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Carburante</th><th class="num">Autostrada</th><th class="num">Rete ordinaria</th><th class="num">Differenza</th></tr>
+      </thead>
+      <tbody>
+        {righe.map((r) => (
+          <tr>
+            <td>{r.label} <small>({r.unit})</small></td>
+            <td class="num">{prezzo(r.a)}</td>
+            <td class="num">{prezzo(r.s)}</td>
+            <td class="num">{Math.abs(r.a - r.s) < 0.0005 ? 'in linea' : `${r.a > r.s ? '+' : '−'}${cent(r.a - r.s)} cent`}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>La differenza dipende dalla modalità</h2>
+  <p>
+    In self service la benzina in autostrada costa in media {prezzo(bSelf.a)} euro al litro: {confronto(bSelf.a, bSelf.s)}.
+    {bServ && (
+      <>
+        {' '}In servito costa {prezzo(bServ.a)} euro al litro: {confronto(bServ.a, bServ.s)}.
+      </>
+    )}
+  </p>
+  {bServ && (
+    <p>
+      In autostrada tra il self e il servito ci sono {cent(bServ.a - bSelf.a)} centesimi al litro, cioè
+      {euro(Math.abs(bServ.a - bSelf.a) * 50)} euro su un pieno da 50 litri. Sulla rete ordinaria la distanza tra le due
+      modalità è di {cent(bServ.s - bSelf.s)} centesimi al litro.
+    </p>
+  )}
+
+  <h2>Le autostrade più e meno care</h2>
+  <p>
+    Tra le autostrade con almeno cinque aree di servizio che comunicano il prezzo della benzina, la media più bassa in
+    self è quella dell'autostrada {piuBassa.code} ({prezzo(piuBassa.stats.benzina!.avg)} euro al litro), la più alta quella
+    dell'autostrada {piuAlta.code} ({prezzo(piuAlta.stats.benzina!.avg)} euro al litro): {cent(piuAlta.stats.benzina!.avg - piuBassa.stats.benzina!.avg)} centesimi
+    di differenza.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Autostrada</th><th class="num">Aree di servizio</th><th class="num">Benzina self</th><th class="num">Gasolio self</th></tr>
+      </thead>
+      <tbody>
+        {classifica.map((a) => (
+          <tr>
+            <td>
+              <a href={`/prezzi-carburanti/autostrada/${a.slug}/`}>{a.code}</a>
+              {a.percorso && <span class="pp-st-addr">{a.percorso}</span>}
+            </td>
+            <td class="num">{a.count}</td>
+            <td class="num">{prezzo(a.stats.benzina!.avg)}</td>
+            <td class="num">{prezzo(a.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Come spendere meno in viaggio</h2>
+  <ul>
+    <li>Controlla il prezzo prima di partire: nella pagina di ogni autostrada trovi le aree di servizio ordinate per prezzo.</li>
+    <li>Sulla stessa autostrada il prezzo cambia da un'area all'altra: scegli in anticipo dove fermarti.</li>
+    {bServ && bServ.a - bServ.s > bSelf.a - bSelf.s && (
+      <li>Preferisci il self service: è lì che la differenza con la rete ordinaria è più piccola.</li>
+    )}
+  </ul>
+  <p>
+    Trovi tutte le tratte nell'elenco delle <a href="/prezzi-carburanti/autostrada/">autostrade</a>. La differenza tra le due
+    modalità è spiegata nella guida <a href="/guide/self-o-servito/">self o servito</a>.
+  </p>
+</GuidaLayout>

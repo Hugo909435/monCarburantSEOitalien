@@ -2,7 +2,7 @@
 // Layout delle pagine dei prezzi: intestazione con briciole, H1, data dei dati.
 import BaseLayout from './BaseLayout.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getMeta, dataLunga, numero } from '../lib/fuel';
+import { getMeta, dataCon, numero } from '../lib/fuel';
 import { SITE } from '../config/site';
 
 interface Props {
@@ -29,7 +29,7 @@ const meta = getMeta();
       <h1>{h1}</h1>
       {lead && <p class="pp-lead">{lead}</p>}
       <p class="pp-meta">
-        Prezzi in vigore il <time datetime={meta.lastUpdate}>{dataLunga(meta.lastUpdate)}</time>
+        Prezzi in vigore <time datetime={meta.lastUpdate}>{dataCon('il', meta.lastUpdate)}</time>
         {count != null && ` · ${numero(count)} ${count === 1 ? 'distributore' : 'distributori'}`}
         {' '}· Fonte: <a href={SITE.dataSource.url} rel="noopener noreferrer">MIMIT</a> ({SITE.dataSource.licence})
       </p>

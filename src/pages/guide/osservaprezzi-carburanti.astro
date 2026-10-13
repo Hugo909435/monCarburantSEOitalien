@@ -1,0 +1,81 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getMeta, getProvince, getImpiantiProvincia, numero, dataCon } from '../../lib/fuel';
+import { perc } from '../../lib/guide';
+import { SITE } from '../../config/site';
+
+const meta = getMeta();
+// Quanti impianti hanno comunicato un prezzo negli 8 giorni prima della data dei dati.
+const giorno = 24 * 60 * 60 * 1000;
+const riferimento = new Date(`${meta.estrazione}T00:00:00Z`).getTime();
+const impianti = getProvince().flatMap((p) => getImpiantiProvincia(p.sigla)).filter((s) => s.agg);
+const recenti = impianti.filter((s) => riferimento - new Date(`${s.agg}T00:00:00Z`).getTime() <= 8 * giorno).length;
+const quotaRecenti = impianti.length ? recenti / impianti.length : null;
+
+// Obbligo di comunicazione dei prezzi: fiscoetasse.com (rassegna-stampa/34062)
+// e leggioggi.it (?p=79824); pubblicazione quotidiana dei dati: comunicato del
+// MIMIT sulla circolare del 6 luglio 2023 e leggioggi.it. Lette il 13 ottobre 2026.
+const fonti = [
+  { label: 'MIMIT, «Emanata circolare per modalità dell’obbligo di comunicazione dei prezzi carburanti»', url: 'https://www.mimit.gov.it/it/notizie-stampa/emanata-circolare-per-modalita-dellobbligo-di-comunicazione-dei-prezzi-carburanti' },
+  { label: 'Fisco e Tasse, «Obbligo comunicazione prezzi carburanti dal 24 luglio: come fare e chiarimenti del MIMIT»', url: 'https://www.fiscoetasse.com/rassegna-stampa/34062-obbligo-comunicazione-prezzi-carburanti-dal-24-luglio-come-fare-e-chiarimenti-del-mimit.html' },
+  { label: 'LeggiOggi, «Prezzi carburante: obbligo comunicazione dal 24 luglio»', url: 'https://www.leggioggi.it/?p=79824' },
+];
+---
+
+<GuidaLayout slug="osservaprezzi-carburanti" fonti={fonti}>
+  <h2>Che cos'è l'Osservaprezzi carburanti</h2>
+  <p>
+    L'Osservaprezzi carburanti è il servizio del Ministero delle Imprese e del Made in Italy (MIMIT) che raccoglie e
+    pubblica i prezzi praticati dai distributori di carburante. I prezzi non sono rilevati dal Ministero: sono i
+    gestori degli impianti a comunicarli.
+  </p>
+
+  <h2>Cosa devono comunicare i gestori</h2>
+  <p>
+    L'obbligo nasce dall'articolo 51 della legge 99/2009. Le modalità oggi in vigore sono state fissate dal
+    decreto-legge 5/2023 e dal decreto ministeriale del 31 marzo 2023, e si applicano dal 24 luglio 2023:
+  </p>
+  <ul>
+    <li>ogni variazione di prezzo, in aumento o in diminuzione, va comunicata prima di applicarla o al più tardi nel momento in cui viene applicata;</li>
+    <li>anche se il prezzo non cambia, la comunicazione va ripetuta ogni settimana, entro l'ottavo giorno dalla precedente;</li>
+    <li>il prezzo da comunicare è quello in self service; se l'impianto vende anche in servito, comunicare quel prezzo è facoltativo;</li>
+    <li>se l'impianto vende solo in servito, l'obbligo riguarda il prezzo servito.</li>
+  </ul>
+
+  <h2>Quanto sono aggiornati i dati</h2>
+  <p>
+    Ogni mattina il Ministero pubblica come open data i prezzi in vigore alle 8 del giorno precedente. Nel file di
+    oggi ci sono {numero(meta.totalStations)} distributori con almeno un prezzo valido, in {numero(meta.totalComuni)} comuni.
+  </p>
+  {quotaRecenti != null && (
+    <p>
+      Per ogni impianto il file riporta la data dell'ultima comunicazione. Nei dati {dataCon('del', meta.lastUpdate)},
+      il {perc(quotaRecenti)}% dei distributori ha comunicato un prezzo negli otto giorni precedenti.
+    </p>
+  )}
+
+  <h2>Perché il prezzo alla pompa può essere diverso</h2>
+  <ul>
+    <li>Il file pubblicato ogni mattina fotografa i prezzi del giorno prima: se il gestore ha cambiato prezzo nel frattempo, alla pompa trovi quello nuovo.</li>
+    <li>Un gestore può comunicare in ritardo, o commettere un errore di inserimento.</li>
+    <li>Il prezzo servito non è sempre comunicato, perché quando c'è anche il self service è facoltativo.</li>
+  </ul>
+  <p>Il prezzo esposto al distributore è l'unico che fa fede.</p>
+
+  <h2>Come usiamo questi dati</h2>
+  <p>
+    {SITE.name} è un sito indipendente e non ufficiale. Scarichiamo ogni giorno gli open data del Ministero,
+    pubblicati con licenza {SITE.dataSource.licence}, e li riorganizziamo per regione, provincia, comune, marchio e autostrada.
+  </p>
+  <ul>
+    <li>Scartiamo i prezzi non confermati da più di 30 giorni.</li>
+    <li>Scartiamo i prezzi palesemente errati, troppo lontani dai valori del giorno.</li>
+    <li>Calcoliamo le medie di benzina e gasolio sul self service e indichiamo il servito a parte.</li>
+    <li>Confrontiamo solo i carburanti standard, non i prodotti speciali dei singoli marchi.</li>
+  </ul>
+  <p>
+    Tutti i dettagli sono nella <a href="/prezzi-carburanti/metodologia/">metodologia</a>. Per vedere i dati all'opera
+    parti dalla <a href="/prezzi-carburanti/">pagina dei prezzi</a> o dalla guida su
+    <a href="/guide/dove-costa-meno-la-benzina/">dove costa meno la benzina</a>.
+  </p>
+</GuidaLayout>

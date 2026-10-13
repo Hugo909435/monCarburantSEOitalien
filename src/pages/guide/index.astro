@@ -1,0 +1,34 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import { GUIDE } from '../../config/guide';
+import { SITE } from '../../config/site';
+---
+
+<BaseLayout
+  title="Guide sui carburanti: prezzi, accise, risparmio"
+  description={`Le guide di ${SITE.name}: accise, self e servito, pompe bianche, autostrade, GPL e metano, con i prezzi aggiornati ogni giorno.`}
+>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Guide', href: '/guide/' }]} />
+      <h1>Guide sui carburanti</h1>
+      <p class="pp-lead">
+        Come si forma il prezzo, dove costa meno, quanto si risparmia: le risposte, con i numeri ricalcolati ogni giorno
+        sui prezzi comunicati dai gestori al Ministero.
+      </p>
+    </div>
+  </div>
+  <section class="pp-section">
+    <div class="container">
+      <div class="guida-elenco">
+        {GUIDE.map((g) => (
+          <a class="guida-card" href={`/guide/${g.slug}/`}>
+            <strong>{g.titolo}</strong>
+            <span>{g.sintesi}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

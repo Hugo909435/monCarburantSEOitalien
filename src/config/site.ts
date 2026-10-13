@@ -23,8 +23,11 @@ export const SITE = {
     url: 'https://www.hostinger.com',
   },
   // Vuoti finché gli account non esistono: nessuno script viene caricato.
-  // Prima di riempirli: scrivere la sezione «Cookie» di src/pages/privacy.astro
-  // (il build si ferma finché non è fatto).
+  // gaId (formato «G-XXXXXXXXXX»): basta compilarlo. Attiva l'avviso di consenso
+  // (src/components/CookieBanner.astro) e la versione con Analytics della sezione
+  // «Cookie» di src/pages/privacy.astro; Analytics parte solo dopo il consenso.
+  // adsClient: prima di compilarlo, scrivere la parte sulla pubblicità della
+  // sezione «Cookie» (il build si ferma finché non è fatto).
   gaId: '',
   adsClient: '',
   dataSource: {

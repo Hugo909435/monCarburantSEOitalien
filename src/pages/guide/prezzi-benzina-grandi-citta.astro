@@ -1,0 +1,95 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getComuni, prezzo, numero, diffCent } from '../../lib/fuel';
+import { cent, fasciaEconomica } from '../../lib/guide';
+
+const naz = getNazionale().stats;
+// Le 15 città con più distributori.
+const citta = getComuni()
+  .filter((c) => c.stats.benzina && c.stats.gasolio && !c.stats.benzina.soloServito)
+  .sort((x, y) => y.count - x.count)
+  .slice(0, 15);
+const perPrezzo = [...citta].sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+const menoCara = perPrezzo[0];
+const piuCara = perPrezzo[perPrezzo.length - 1];
+const fasce = fasciaEconomica(20);
+const sottoMedia = citta.filter((c) => c.stats.benzina!.avg < naz.benzina!.avg).length;
+---
+
+<GuidaLayout slug="prezzi-benzina-grandi-citta">
+  <h2>Le città confrontate</h2>
+  <p>
+    Abbiamo preso le quindici città italiane con più distributori nei dati di oggi e ne abbiamo confrontato i prezzi
+    medi in self service. La media nazionale è di {prezzo(naz.benzina!.avg)} euro al litro per la benzina e di
+    {prezzo(naz.gasolio!.avg)} euro al litro per il gasolio.
+  </p>
+
+  <h2>La classifica per prezzo della benzina</h2>
+  <p>
+    Tra queste città la benzina costa meno a <a href={`/prezzi-carburanti/comune/${menoCara.slug}/`}>{menoCara.name}</a>, con una
+    media di {prezzo(menoCara.stats.benzina!.avg)} euro al litro, e di più a
+    <a href={`/prezzi-carburanti/comune/${piuCara.slug}/`}>{piuCara.name}</a>, con {prezzo(piuCara.stats.benzina!.avg)} euro al litro:
+    {cent(piuCara.stats.benzina!.avg - menoCara.stats.benzina!.avg)} centesimi di differenza.
+    {sottoMedia === 0
+      ? ' Nessuna delle 15 città è sotto la media nazionale.'
+      : sottoMedia === citta.length
+        ? ' Tutte le 15 città sono sotto la media nazionale.'
+        : sottoMedia === 1
+          ? ' Una sola delle 15 città è sotto la media nazionale.'
+          : ` ${sottoMedia} delle 15 città sono sotto la media nazionale.`}
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th>Città</th><th class="num">Distributori</th><th class="num">Benzina self</th>
+          <th class="num">Rispetto alla media</th><th class="num">Gasolio self</th>
+        </tr>
+      </thead>
+      <tbody>
+        {perPrezzo.map((c, i) => (
+          <tr>
+            <td>{i + 1}. <a href={`/prezzi-carburanti/comune/${c.slug}/`}>{c.name}</a></td>
+            <td class="num">{numero(c.count)}</td>
+            <td class="num">{prezzo(c.stats.benzina!.avg)}</td>
+            <td class="num">{diffCent(c.stats.benzina!.avg, naz.benzina!.avg)}</td>
+            <td class="num">{prezzo(c.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>I distributori più economici in ogni città</h2>
+  <p>
+    La media dice quanto costa in generale fare rifornimento in una città. Per capire quanto si può risparmiare
+    scegliendo il distributore, nella tabella trovi il prezzo medio del 10% di impianti più economici di ogni città e
+    la sua distanza dalla media.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Città</th><th class="num">Media dei più economici</th><th class="num">Media della città</th><th class="num">Differenza</th></tr>
+      </thead>
+      <tbody>
+        {citta.filter((c) => fasce.has(c.slug)).map((c) => {
+          const f = fasce.get(c.slug)!;
+          return (
+            <tr>
+              <td><a href={`/prezzi-carburanti/comune/${c.slug}/`}>{c.name}</a></td>
+              <td class="num is-min">{prezzo(f.economici)}</td>
+              <td class="num">{prezzo(f.media)}</td>
+              <td class="num">{cent(f.media - f.economici)} cent</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Nella pagina di ogni città trovi l'elenco dei distributori ordinati per prezzo e la mappa. Per il confronto tra
+    territori più ampi leggi <a href="/guide/dove-costa-meno-la-benzina/">dove costa meno la benzina in Italia</a>; per il
+    metodo di questo calcolo, la guida su
+    <a href="/guide/risparmiare-confrontando-i-distributori/">quanto si risparmia confrontando i distributori</a>.
+  </p>
+</GuidaLayout>

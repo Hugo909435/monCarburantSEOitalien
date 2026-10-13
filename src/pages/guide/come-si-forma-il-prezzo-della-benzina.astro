@@ -1,0 +1,85 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, prezzo, euro, dataLunga } from '../../lib/fuel';
+import { composizione, cent, perc, intervallo90, FONTE_LIVIGNO } from '../../lib/guide';
+import { DATA_VERIFICA } from '../../config/fisco';
+
+const s = getNazionale().stats.benzina!;
+const medio = { p: s.avg, ...composizione(s.avg) };
+const quota = (v: number) => perc(v / medio.p);
+const servito = s.servito != null && s.servito > s.avg ? s.servito : null;
+const range = intervallo90('benzina');
+
+// Fonti: vedi src/config/fisco.ts (lette il 13 ottobre 2026). Contenuto del
+// prezzo industriale: Teleborsa (prodotto raffinato, logistica, distribuzione,
+// margine della filiera) e Il Sole 24 Ore (materia prima, costi di struttura,
+// margini).
+const fonti = [
+  { label: 'Teleborsa, «Da che cosa dipende il prezzo della benzina» (10 aprile 2026)', url: 'https://www.teleborsa.it/Guide/2026/04/10/da-che-cosa-dipende-il-prezzo-della-benzina-1.html' },
+  { label: 'Rivaluta.it, «Accise, IVA e prezzo netto dei carburanti» (dati MASE)', url: 'https://www.rivaluta.it/prezzi/prezzi-carburanti-accise-iva-netto.asp' },
+  { label: 'Quotidiano Motori, «Accise carburanti 2026: quanto si paga su benzina e gasolio»', url: 'https://www.quotidianomotori.com/automobili/accise-carburanti/' },
+  FONTE_LIVIGNO,
+];
+---
+
+<GuidaLayout slug="come-si-forma-il-prezzo-della-benzina" fonti={fonti}>
+  <h2>Le tre voci del prezzo</h2>
+  <p>Il prezzo che leggi sulla pompa è la somma di tre voci:</p>
+  <ul>
+    <li>
+      il <strong>prezzo industriale</strong>, che comprende il costo del carburante raffinato, i costi di logistica e
+      di distribuzione e i margini di chi lo vende;
+    </li>
+    <li>l'<strong>accisa</strong>, una somma fissa per ogni litro;</li>
+    <li>l'<strong>IVA</strong> al 22%, calcolata sulla somma delle prime due voci.</li>
+  </ul>
+
+  <h2>Un litro di benzina, oggi</h2>
+  <p>
+    Il prezzo medio nazionale della benzina in modalità self service è di {prezzo(medio.p)} euro al litro. Ecco come si
+    divide, applicando l'aliquota piena dell'accisa.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Voce</th><th class="num">€/L</th><th class="num">Quota</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Prezzo industriale</td><td class="num">{prezzo(medio.industriale)}</td><td class="num">{quota(medio.industriale)}%</td></tr>
+        <tr><td>Accisa</td><td class="num">{prezzo(medio.accisa)}</td><td class="num">{quota(medio.accisa)}%</td></tr>
+        <tr><td>IVA (22%)</td><td class="num">{prezzo(medio.iva)}</td><td class="num">{quota(medio.iva)}%</td></tr>
+        <tr><td><strong>Prezzo alla pompa</strong></td><td class="num"><strong>{prezzo(medio.p)}</strong></td><td class="num"><strong>100%</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Su un pieno da 50 litri, cioè {euro(medio.p * 50)} euro, {euro(medio.imposte * 50)} euro sono imposte e
+    {euro(medio.industriale * 50)} euro sono il prezzo industriale.
+  </p>
+  <p class="guida-nota">
+    Il calcolo usa l'aliquota piena dell'accisa, verificata il {dataLunga(DATA_VERIFICA)}. Quando un decreto la riduce per
+    un periodo, la parte di imposte è più bassa.
+  </p>
+
+  <h2>Perché il prezzo cambia da un distributore all'altro</h2>
+  <p>
+    L'aliquota dell'accisa e quella dell'IVA sono le stesse per tutti i distributori, con l'eccezione di Livigno, che
+    è zona extradoganale. Quello che cambia è il prezzo industriale: ogni gestore lo fissa in base ai propri costi,
+    al marchio, alla posizione e alla concorrenza della zona.
+  </p>
+  <p>
+    Oggi, in self service, nove distributori su dieci vendono la benzina a un prezzo compreso tra {prezzo(range.da)} e
+    {prezzo(range.a)} euro al litro.
+    {servito && (
+      <>
+        {' '}Conta anche la modalità: in servito la media è di {prezzo(servito)} euro al litro, {cent(servito - s.avg)} centesimi
+        in più del self.
+      </>
+    )}
+  </p>
+  <p>
+    Per approfondire: <a href="/guide/accise-benzina-gasolio/">quanto pesano le accise</a>,
+    <a href="/guide/self-o-servito/">la differenza tra self e servito</a> e
+    <a href="/guide/dove-costa-meno-la-benzina/">dove costa meno la benzina</a>.
+  </p>
+</GuidaLayout>

@@ -152,6 +152,20 @@ export function dataLunga(iso: string): string {
   return new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Rome' });
 }
 
+/**
+ * Data preceduta dall'articolo o dalla preposizione articolata corretta:
+ * "il 12 ottobre 2026", "l'8 ottobre 2026", "dell'11 ottobre 2026", "dal 1° ottobre 2026".
+ * In italiano l'articolo si elide davanti a 8 (otto) e 11 (undici); il primo del mese si scrive 1°.
+ */
+export function dataCon(forma: 'il' | 'del' | 'dal', iso: string, maiuscola = false): string {
+  const data = dataLunga(iso);
+  const giorno = parseInt(data, 10);
+  const elisa = giorno === 8 || giorno === 11;
+  const prefisso = { il: elisa ? "l'" : 'il ', del: elisa ? "dell'" : 'del ', dal: elisa ? "dall'" : 'dal ' }[forma];
+  const testo = prefisso + (giorno === 1 ? data.replace(/^1 /, '1° ') : data);
+  return maiuscola ? testo.charAt(0).toUpperCase() + testo.slice(1) : testo;
+}
+
 /** Nome mostrato per un impianto: il marchio, o il nome proprio per le pompe bianche */
 export function nomeImpianto(s: Impianto): string {
   return s.marca === 'Pompe bianche' || s.marca === 'Altri marchi' ? titolo(s.nome) : s.marca;

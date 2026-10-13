@@ -6,7 +6,7 @@ import FAQ from '../components/FAQ.astro';
 import {
   FUELS, FUEL_KEYS, MIN_IMPIANTI_SIGNIFICATIVI,
   getMeta, getNazionale, getRegioni, getProvince, getComuni, getMarche, getAutostrade,
-  prezzo, diffCent, euro, numero, dataLunga,
+  prezzo, diffCent, euro, numero, dataCon,
 } from '../lib/fuel';
 import { SITE } from '../config/site';
 
@@ -52,7 +52,7 @@ const cent = (n: number) => (n * 100).toLocaleString('it-IT', { minimumFractionD
 const faq = [
   {
     question: 'Quanto costa oggi la benzina in Italia?',
-    answer: `Il ${dataLunga(meta.lastUpdate)} il prezzo medio nazionale della benzina in modalità self service è di ${prezzo(benzina.avg)} €/L${benzina.servito ? `, quello del servito di ${prezzo(benzina.servito)} €/L` : ''}. Il gasolio self costa in media ${prezzo(gasolio.avg)} €/L. Le medie sono calcolate su ${numero(meta.totalStations)} distributori.`,
+    answer: `${dataCon('il', meta.lastUpdate, true)} il prezzo medio nazionale della benzina in modalità self service è di ${prezzo(benzina.avg)} €/L${benzina.servito ? `, quello del servito di ${prezzo(benzina.servito)} €/L` : ''}. Il gasolio self costa in media ${prezzo(gasolio.avg)} €/L. Le medie sono calcolate su ${numero(meta.totalStations)} distributori.`,
   },
   {
     question: 'Come trovo il distributore più economico vicino a me?',
@@ -139,7 +139,7 @@ const jsonLd = [
       <PriceCards stats={naz} link />
       <div class="pp-text" style="margin-top:1rem">
         <p>
-          Il {dataLunga(meta.lastUpdate)} la benzina self service costa in media <strong>{prezzo(benzina.avg)} €/L</strong>
+          {dataCon('il', meta.lastUpdate, true)} la benzina self service costa in media <strong>{prezzo(benzina.avg)} €/L</strong>
           e il gasolio <strong>{prezzo(gasolio.avg)} €/L</strong>
           {diffCent(gasolio.avg, benzina.avg) && <> ({diffCent(gasolio.avg, benzina.avg)} rispetto alla benzina)</>}.
           {naz.gpl && <> Il GPL è a {prezzo(naz.gpl.avg)} €/L</>}{naz.metano && <> e il metano a {prezzo(naz.metano.avg)} €/kg</>}.

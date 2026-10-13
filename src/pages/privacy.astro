@@ -3,18 +3,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { SITE } from '../config/site';
 
-// Questa pagina descrive il sito com'è oggi: nessuno strumento di misurazione,
-// nessuna pubblicità, nessun cookie. Attivare Analytics o AdSense senza
-// riscrivere la sezione «Cookie» (elenco dei cookie, raccolta del consenso)
-// renderebbe falsa l'informativa: il build si ferma.
-if (SITE.gaId || SITE.adsClient) {
-  throw new Error('privacy.astro: aggiornare la sezione «Cookie» prima di attivare gaId o adsClient (src/config/site.ts)');
+// La sezione «Cookie» ha due versioni: senza Analytics (SITE.gaId vuoto) il sito
+// non installa nulla; con Analytics descrive l'avviso di consenso di
+// src/components/CookieBanner.astro. La pubblicità non è descritta: attivare
+// AdSense senza scrivere la parte corrispondente (cookie pubblicitari, consenso)
+// renderebbe falsa l'informativa, quindi il build si ferma.
+if (SITE.adsClient) {
+  throw new Error('privacy.astro: scrivere la parte sulla pubblicità della sezione «Cookie» prima di attivare adsClient (src/config/site.ts)');
 }
+const analytics = Boolean(SITE.gaId);
 
 // Fonti, lette il 12 ottobre 2026.
 // Diritti dell'interessato e reclamo: Regolamento (UE) 2016/679, articoli 15-21 e 77.
 // Garante, denominazione e indirizzo: garanteprivacy.it/home/footer/contatti e
 // garanteprivacy.it/it/diritti/come-agire-per-tutelare-i-tuoi-dati-personali/reclamo.
+//
+// Fonti della sezione «Cookie» con Analytics, lette il 13 ottobre 2026.
+// Consenso, revoca, durata di 6 mesi, strumento tecnico per ricordare la scelta:
+// Linee guida cookie del Garante (provv. n. 231 del 10 giugno 2021, doc. web
+// 9677876) e FAQ garanteprivacy.it/faq/cookie.
+// Base giuridica e revoca: Regolamento (UE) 2016/679, art. 6, par. 1, lett. a e
+// art. 7, par. 3 (testo letto su privacy-regulation.eu/it e gdpr-info.eu).
+// Cookie di Google Analytics: support.google.com/analytics/answer/11397207
+// (_ga e _ga_<container-id>, due anni) e cookiedatabase.org (_ga: 2 anni;
+// _ga_*: 1 anno). Le due fonti non coincidono sulla durata del secondo cookie:
+// la pagina indica solo il massimo, «fino a 2 anni», vero in entrambi i casi.
+// Il nome della società Google che fornisce il servizio non è indicato:
+// confermato da una sola fonte.
 const aggiornamento = 'ottobre 2026';
 ---
 
@@ -64,18 +79,61 @@ const aggiornamento = 'ottobre 2026';
       l'<a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener noreferrer">informativa della OpenStreetMap Foundation</a>.
     </p>
 
-    <h2>Cookie</h2>
-    <p>
-      {SITE.name} non installa cookie: non usa strumenti di misurazione del pubblico né pubblicità. Se in futuro
-      saranno introdotti, questa pagina sarà aggiornata e i cookie non necessari saranno installati solo con il tuo
-      consenso.
-    </p>
+    <h2 id="cookie">Cookie</h2>
+    {analytics ? (
+      <>
+        <p>
+          {SITE.name} non ospita pubblicità. Usa uno strumento tecnico, che non richiede consenso, e i cookie di
+          statistica di Google Analytics, installati solo se li accetti.
+        </p>
+        <p>
+          <strong>Strumento tecnico.</strong> Per ricordare la scelta che fai nell'avviso sui cookie, il sito salva nel
+          tuo browser (archiviazione locale, voce «mc-cookie») la scelta e la data in cui l'hai fatta.
+          L'informazione resta nel tuo browser e non viene inviata ai nostri server. Dopo 6 mesi l'avviso ti viene
+          mostrato di nuovo.
+        </p>
+        <p>
+          <strong>Cookie di statistica, solo con il tuo consenso.</strong> Se accetti, il sito carica Google Analytics,
+          un servizio di misurazione delle visite fornito da Google, che ci aiuta a contare le visite e a capire
+          quali pagine sono più utili. Google Analytics installa due cookie:
+        </p>
+        <ul>
+          <li><strong>_ga</strong>, che serve a distinguere i visitatori;</li>
+          <li><strong>_ga_</strong> seguito da un identificativo, che serve a mantenere lo stato della sessione.</li>
+        </ul>
+        <p>
+          Questi cookie durano fino a 2 anni. La base giuridica è il tuo consenso (art. 6, par. 1, lett. a del GDPR).
+          Finché non accetti, Google Analytics non viene caricato e questi cookie non vengono installati. Per sapere
+          come Google tratta i dati raccolti, consulta
+          la <a href="https://policies.google.com/technologies/partner-sites?hl=it" rel="noopener noreferrer">pagina informativa di Google</a>.
+        </p>
+        <p>
+          <strong>Come cambiare la tua scelta.</strong> Puoi revocare il consenso o darlo in ogni momento, con la stessa
+          facilità: usa il pulsante qui sotto oppure il link «Rivedi le tue scelte sui cookie» in fondo a ogni
+          pagina. Se revochi il consenso, i cookie di statistica vengono cancellati dal tuo browser.
+        </p>
+        <p>Scelta attuale: <strong data-cookie-stato>nessuna scelta registrata</strong>.</p>
+        <p><button type="button" class="btn-secondary" data-cookie-apri>Rivedi le tue scelte sui cookie</button></p>
+      </>
+    ) : (
+      <p>
+        {SITE.name} non installa cookie: non usa strumenti di misurazione del pubblico né pubblicità. Se in futuro
+        saranno introdotti, questa pagina sarà aggiornata e i cookie non necessari saranno installati solo con il tuo
+        consenso.
+      </p>
+    )}
 
     <h2>A chi sono comunicati i dati</h2>
     <p>
       I tuoi dati non sono venduti né ceduti a terzi. Possono essere trattati dai fornitori tecnici del sito (il
       fornitore di hosting e il servizio di posta elettronica) soltanto per erogare i loro servizi.
     </p>
+    {analytics && (
+      <p>
+        Se accetti i cookie di statistica, i dati sulla tua navigazione raccolti da Google Analytics sono trattati
+        da Google.
+      </p>
+    )}
 
     <h2>I tuoi diritti</h2>
     <p>In base al GDPR puoi:</p>
@@ -85,7 +143,8 @@ const aggiornamento = 'ottobre 2026';
       <li>chiederne la cancellazione (art. 17);</li>
       <li>chiedere la limitazione del trattamento (art. 18);</li>
       <li>ricevere i tuoi dati in un formato strutturato e leggibile da dispositivo automatico (art. 20);</li>
-      <li>opporti a un trattamento fondato sul nostro legittimo interesse (art. 21).</li>
+      <li>opporti a un trattamento fondato sul nostro legittimo interesse (art. 21){analytics ? ';' : '.'}</li>
+      {analytics && <li>revocare in qualsiasi momento il consenso che hai dato (art. 7, par. 3).</li>}
     </ul>
     <p>
       Per esercitare questi diritti scrivi a <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a>.

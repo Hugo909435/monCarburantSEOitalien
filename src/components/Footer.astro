@@ -36,10 +36,12 @@ const currentYear = new Date().getFullYear();
     <div class="footer-col">
       <p class="footer-heading">Informazioni</p>
       <ul role="list">
+        <li><a href="/guide/">Guide</a></li>
         <li><a href="/chi-siamo/">Chi siamo</a></li>
         <li><a href="/prezzi-carburanti/metodologia/">Metodologia</a></li>
         <li><a href="/note-legali/">Note legali</a></li>
         <li><a href="/privacy/">Privacy e cookie</a></li>
+        {SITE.gaId && (<li><button type="button" class="footer-link-btn" data-cookie-apri>Rivedi le tue scelte sui cookie</button></li>)}
       </ul>
     </div>
 
@@ -156,6 +158,22 @@ const currentYear = new Date().getFullYear();
   }
 
   .footer-col a:hover {
+    color: #fff;
+  }
+
+  .footer-link-btn {
+    padding: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 0.875rem;
+    color: #94a3b8;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .footer-link-btn:hover {
     color: #fff;
   }
 

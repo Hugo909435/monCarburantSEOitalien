@@ -1,0 +1,87 @@
+---
+// Layout delle guide: intestazione, corpo, fonti, altre guide.
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { GUIDE, getGuida } from '../config/guide';
+import { getMeta, dataCon } from '../lib/fuel';
+import { SITE } from '../config/site';
+
+interface Props {
+  slug: string;
+  /** Fonti esterne dei fatti citati nella guida (oltre ai dati del Ministero) */
+  fonti?: { label: string; url: string }[];
+}
+
+const { slug, fonti = [] } = Astro.props;
+const guida = getGuida(slug);
+const meta = getMeta();
+const url = `/guide/${guida.slug}/`;
+// Le tre guide successive nell'elenco: così tutte sono collegate tra loro.
+const i = GUIDE.indexOf(guida);
+const altre = [1, 2, 3].map((n) => GUIDE[(i + n) % GUIDE.length]);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: guida.titolo,
+  description: guida.descrizione,
+  datePublished: guida.pubblicata,
+  dateModified: meta.lastUpdate,
+  inLanguage: SITE.lang,
+  mainEntityOfPage: `${SITE.url}${url}`,
+  image: `${SITE.url}/images/og-default.png`,
+  author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+};
+---
+
+<BaseLayout
+  title={guida.metaTitolo}
+  description={guida.descrizione}
+  type="article"
+  publishedAt={guida.pubblicata}
+  updatedAt={meta.lastUpdate}
+  jsonLd={jsonLd}
+>
+  <div class="pp-hero">
+    <div class="container">
+      <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Guide', href: '/guide/' }, { label: guida.titolo, href: url }]} />
+      <h1>{guida.titolo}</h1>
+      <p class="pp-lead">{guida.sintesi}</p>
+      <p class="pp-meta">
+        Prezzi in vigore <time datetime={meta.lastUpdate}>{dataCon('il', meta.lastUpdate)}</time>
+        · Fonte dei prezzi: <a href={SITE.dataSource.url} rel="noopener noreferrer">MIMIT</a> ({SITE.dataSource.licence})
+        · Sito non ufficiale
+      </p>
+    </div>
+  </div>
+
+  <article class="container pp-page pp-text guida">
+    <slot />
+
+    <h2>Fonti</h2>
+    <ul>
+      <li>
+        Prezzi: <a href={SITE.dataSource.url} rel="noopener noreferrer">{SITE.dataSource.label}</a>, open data con licenza
+        {SITE.dataSource.licence}, elaborati da {SITE.name} secondo la <a href="/prezzi-carburanti/metodologia/">metodologia</a>.
+      </li>
+      {fonti.map((f) => (
+        <li><a href={f.url} rel="noopener noreferrer">{f.label}</a></li>
+      ))}
+    </ul>
+  </article>
+
+  <section class="pp-section pp-alt">
+    <div class="container">
+      <h2 class="pp-h2">Altre guide</h2>
+      <div class="guida-elenco">
+        {altre.map((g) => (
+          <a class="guida-card" href={`/guide/${g.slug}/`}>
+            <strong>{g.titolo}</strong>
+            <span>{g.sintesi}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

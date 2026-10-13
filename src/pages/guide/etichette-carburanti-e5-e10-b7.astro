@@ -1,0 +1,110 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, FUELS, FUEL_KEYS, prezzo } from '../../lib/fuel';
+
+const naz = getNazionale().stats;
+const ETICHETTA: Record<string, string> = {
+  benzina: 'Cerchio, lettera E',
+  gasolio: 'Quadrato, lettera B',
+  gpl: 'Rombo, sigla LPG',
+  metano: 'Rombo, sigla CNG',
+};
+
+// Fonti lette il 13 ottobre 2026: miolegale.it (direttiva 2014/94/UE, art. 7;
+// D.Lgs. 257/2016; norma UNI EN 16942:2016; obbligo dal 12 ottobre 2018; forme
+// e sigle) e money.it (forme, sigle, dove si trovano le etichette).
+// Non è indicato quali miscele siano oggi in vendita in Italia: le fonti lette
+// non sono aggiornate su questo punto.
+const fonti = [
+  { label: 'MioLegale, «Nuove sigle carburanti: la direttiva DAFI»', url: 'https://miolegale.it/notizie/nuove-sigle-carburanti-direttiva-dafi/' },
+  { label: 'Money.it, «Carburanti, nuovi nomi ed etichette: UE cambia i simboli per benzina, gasolio e gas»', url: 'https://www.money.it/Carburanti-nuovi-nomi-etichette-UE-simboli-benzina-gasolio-e-gas' },
+];
+---
+
+<GuidaLayout slug="etichette-carburanti-e5-e10-b7" fonti={fonti}>
+  <h2>Perché esistono queste sigle</h2>
+  <p>
+    Dal 12 ottobre 2018 i carburanti sono indicati con le stesse etichette in tutta l'Unione europea. L'obbligo viene
+    dalla direttiva 2014/94/UE, recepita in Italia con il decreto legislativo 257/2016; forme e sigle sono definite
+    dalla norma tecnica UNI EN 16942.
+  </p>
+  <p>
+    Lo scopo è evitare errori di rifornimento, soprattutto all'estero: la forma dell'etichetta dice di che famiglia è
+    il carburante, la sigla al suo interno dice quale prodotto è.
+  </p>
+
+  <h2>Tre forme per tre famiglie</h2>
+  <ul>
+    <li><strong>Cerchio</strong>: benzina.</li>
+    <li><strong>Quadrato</strong>: gasolio.</li>
+    <li><strong>Rombo</strong>: carburanti gassosi.</li>
+  </ul>
+
+  <h2>Benzina: E5, E10, E85</h2>
+  <p>
+    Nel cerchio della benzina c'è la lettera E, che sta per etanolo, seguita da un numero: è la percentuale massima di
+    etanolo contenuta nel carburante.
+  </p>
+  <ul>
+    <li><strong>E5</strong>: benzina con fino al 5% di etanolo.</li>
+    <li><strong>E10</strong>: benzina con fino al 10% di etanolo.</li>
+    <li><strong>E85</strong>: benzina con fino all'85% di etanolo.</li>
+  </ul>
+
+  <h2>Gasolio: B7, B10, B100, XTL</h2>
+  <p>
+    Nel quadrato del gasolio c'è la lettera B, che sta per biodiesel, seguita dalla percentuale massima di componente
+    bio.
+  </p>
+  <ul>
+    <li><strong>B7</strong>: gasolio con fino al 7% di biodiesel.</li>
+    <li><strong>B10</strong>: gasolio con fino al 10% di biodiesel.</li>
+    <li><strong>B100</strong>: biodiesel puro.</li>
+    <li><strong>XTL</strong>: gasolio sintetico, che non deriva dalla raffinazione del petrolio.</li>
+  </ul>
+
+  <h2>Gas: LPG, CNG, LNG, H2</h2>
+  <ul>
+    <li><strong>LPG</strong>: GPL, gas di petrolio liquefatto.</li>
+    <li><strong>CNG</strong>: gas naturale compresso, cioè il metano per auto.</li>
+    <li><strong>LNG</strong>: gas naturale liquefatto.</li>
+    <li><strong>H2</strong>: idrogeno.</li>
+  </ul>
+
+  <h2>Dove si trovano le etichette</h2>
+  <p>
+    Al distributore le etichette sono sulla colonnina e sulla pistola di erogazione. Sui veicoli immatricolati dal
+    12 ottobre 2018 sono vicino al tappo o allo sportello del serbatoio e nel libretto di uso e manutenzione.
+  </p>
+  <p>
+    Per sapere quale carburante puoi usare basta confrontare le due etichette: quella sulla pistola deve corrispondere
+    a una di quelle indicate sulla tua auto. Se la tua auto è più vecchia e non ha l'etichetta, fai riferimento al
+    libretto di uso e manutenzione o al costruttore.
+  </p>
+
+  <h2>I carburanti che confrontiamo</h2>
+  <p>
+    Su questo sito confrontiamo i prezzi di quattro carburanti, nella loro versione standard: benzina, gasolio, GPL
+    e metano.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Carburante</th><th>Etichetta</th><th class="num">Prezzo medio di oggi</th></tr>
+      </thead>
+      <tbody>
+        {FUEL_KEYS.filter((k) => naz[k]).map((k) => (
+          <tr>
+            <td><a href={`/${FUELS[k].slug}/`}>{FUELS[k].label}</a></td>
+            <td>{ETICHETTA[k]}</td>
+            <td class="num">{prezzo(naz[k]!.avg)} {FUELS[k].unit}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    I carburanti speciali dei singoli marchi non entrano nelle nostre medie: lo spieghiamo nella
+    <a href="/prezzi-carburanti/metodologia/">metodologia</a>.
+  </p>
+</GuidaLayout>

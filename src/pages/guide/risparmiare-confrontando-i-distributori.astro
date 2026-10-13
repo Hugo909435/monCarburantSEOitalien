@@ -1,0 +1,104 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getComuni, getRegioni, prezzo, euro, numero } from '../../lib/fuel';
+import { cent, fasciaEconomica } from '../../lib/guide';
+
+const naz = getNazionale().stats;
+const SOGLIA = 20;
+// Comuni con almeno 20 distributori che comunicano la benzina in self: per
+// ognuno, la media e la media del 10% di distributori più economici.
+const fasce = fasciaEconomica(SOGLIA);
+const comuni = getComuni()
+  .filter((c) => fasce.has(c.slug))
+  .map((c) => {
+    const f = fasce.get(c.slug)!;
+    return { name: c.name, slug: c.slug, n: f.n, media: f.media, economici: f.economici, quanti: f.quanti, gap: f.media - f.economici };
+  });
+const gapMedio = comuni.reduce((t, c) => t + c.gap, 0) / comuni.length;
+const grandi = [...comuni].sort((x, y) => y.n - x.n).slice(0, 15);
+const top = grandi[0];
+const servito = naz.benzina!.servito != null ? naz.benzina!.servito - naz.benzina!.avg : null;
+const LITRI_ESEMPIO = 1000;
+const medieRegioni = getRegioni().filter((r) => r.stats.benzina).map((r) => r.stats.benzina!.avg);
+const scartoRegioni = Math.max(...medieRegioni) - Math.min(...medieRegioni);
+---
+
+<GuidaLayout slug="risparmiare-confrontando-i-distributori">
+  <h2>Nella stessa città, prezzi diversi</h2>
+  <p>
+    Abbiamo preso i {numero(comuni.length)} comuni italiani in cui almeno {SOGLIA} distributori comunicano il prezzo della
+    benzina in self service. In ognuno abbiamo confrontato il prezzo medio con quello dei distributori più economici:
+    il 10% degli impianti con il prezzo più basso.
+  </p>
+  <p>
+    In media, tra il prezzo medio del comune e quello dei distributori più economici ci sono {cent(gapMedio)} centesimi
+    al litro. Su un pieno da 50 litri sono {euro(gapMedio * 50)} euro.
+  </p>
+  <p class="guida-nota">
+    Usiamo la media del 10% più economico, e non il singolo prezzo più basso, perché il prezzo minimo di una città può
+    essere un errore di inserimento.
+  </p>
+
+  <h2>L'esempio delle città con più distributori</h2>
+  <p>
+    A {top.name} {numero(top.n)} distributori comunicano il prezzo della benzina in self: la media è di {prezzo(top.media)} euro
+    al litro, quella dei {top.quanti} più economici è di {prezzo(top.economici)} euro al litro. Chi sceglie uno di questi
+    invece di un distributore al prezzo medio risparmia {cent(top.gap)} centesimi al litro, cioè {euro(top.gap * 50)} euro
+    su 50 litri.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th>Città</th><th class="num">Media dei più economici</th><th class="num">Media della città</th>
+          <th class="num">Differenza al litro</th><th class="num">Su 50 litri</th>
+        </tr>
+      </thead>
+      <tbody>
+        {grandi.map((c) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/comune/${c.slug}/`}>{c.name}</a></td>
+            <td class="num is-min">{prezzo(c.economici)}</td>
+            <td class="num">{prezzo(c.media)}</td>
+            <td class="num">{cent(c.gap)} cent</td>
+            <td class="num">{euro(c.gap * 50)} €</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Quanto vale in un anno</h2>
+  <p>
+    Il risparmio dipende da quanti litri consumi. Un esempio di calcolo: per chi acquista {numero(LITRI_ESEMPIO)} litri di
+    benzina in un anno, {cent(gapMedio)} centesimi al litro in meno valgono {euro(gapMedio * LITRI_ESEMPIO)} euro. Per fare il
+    conto sul tuo caso, moltiplica i litri che consumi in un anno per la differenza al litro della tua città.
+  </p>
+
+  <h2>Le scelte che contano di più</h2>
+  <ul>
+    <li>
+      <strong>Il distributore.</strong> Nella stessa città i distributori più economici costano in media
+      {cent(gapMedio)} centesimi al litro meno della media.
+      {gapMedio > scartoRegioni && ` È più della distanza tra la regione più cara e la meno cara, che oggi è di ${cent(scartoRegioni)} centesimi.`}
+    </li>
+    {servito != null && servito > 0 && (
+      <li>
+        <strong>La modalità.</strong> In media il servito costa {cent(servito)} centesimi al litro in più del self: lo
+        spieghiamo nella guida <a href="/guide/self-o-servito/">self o servito</a>.
+      </li>
+    )}
+    <li>
+      <strong>Il momento.</strong> I prezzi che mostriamo sono quelli comunicati al Ministero e in vigore il giorno
+      prima: controlla sempre il prezzo esposto prima di fare rifornimento.
+    </li>
+  </ul>
+
+  <h2>Come trovare il più economico vicino a te</h2>
+  <p>
+    Sulla <a href="/">mappa della home</a> puoi cercare i distributori intorno a te. Nelle pagine di ogni
+    <a href="/prezzi-carburanti/province/">provincia</a> e di ogni comune gli impianti sono ordinati per prezzo. Per il
+    confronto tra le città più grandi leggi la guida sul
+    <a href="/guide/prezzi-benzina-grandi-citta/">prezzo della benzina nelle grandi città</a>.
+  </p>
+</GuidaLayout>

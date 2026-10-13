@@ -1,0 +1,111 @@
+---
+import GuidaLayout from '../../layouts/GuidaLayout.astro';
+import { getNazionale, getMarche, prezzo, numero, diffCent } from '../../lib/fuel';
+import { cent, intervallo90 } from '../../lib/guide';
+
+const naz = getNazionale().stats;
+const SOGLIA = 100;
+const marche = getMarche()
+  .filter((m) => m.slug !== 'altri-marchi' && m.count >= SOGLIA && m.stats.benzina && m.stats.gasolio)
+  .sort((x, y) => x.stats.benzina!.avg - y.stats.benzina!.avg);
+// «di Eni», ma «delle pompe bianche»: non è il nome di un marchio.
+const diRete = (m: { name: string; slug: string }) => (m.slug === 'pompe-bianche' ? 'delle pompe bianche' : `di ${m.name}`);
+const primo = marche[0];
+const ultimo = marche[marche.length - 1];
+// Per ogni rete, l'intervallo in cui cade il 90% dei prezzi della benzina self.
+const intervalli = marche
+  .map((m) => ({ m, ...intervallo90('benzina', (s) => s.marcaSlug === m.slug) }))
+  .map((r) => ({ ...r, ampiezza: r.a - r.da }))
+  .sort((x, y) => x.ampiezza - y.ampiezza);
+const stretta = intervalli[0];
+const ampia = intervalli[intervalli.length - 1];
+const perGasolio = [...marche].sort((x, y) => x.stats.gasolio!.avg - y.stats.gasolio!.avg);
+---
+
+<GuidaLayout slug="marchi-carburante-prezzi">
+  <h2>La classifica di oggi</h2>
+  <p>
+    Abbiamo calcolato il prezzo medio in self service di ogni rete con almeno {SOGLIA} impianti: sono {marche.length}. Per la
+    benzina la media più bassa è quella <a href={`/prezzi-carburanti/marca/${primo.slug}/`}>{diRete(primo)}</a>, con
+    {prezzo(primo.stats.benzina!.avg)} euro al litro; la più alta è quella
+    <a href={`/prezzi-carburanti/marca/${ultimo.slug}/`}>{diRete(ultimo)}</a>, con {prezzo(ultimo.stats.benzina!.avg)} euro al litro. La
+    differenza è di {cent(ultimo.stats.benzina!.avg - primo.stats.benzina!.avg)} centesimi al litro.
+  </p>
+  <p>
+    Per il gasolio la media più bassa è quella {diRete(perGasolio[0])} ({prezzo(perGasolio[0].stats.gasolio!.avg)} euro al
+    litro), la più alta quella {diRete(perGasolio[perGasolio.length - 1])}
+    ({prezzo(perGasolio[perGasolio.length - 1].stats.gasolio!.avg)} euro al litro).
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr>
+          <th>Rete</th><th class="num">Impianti</th><th class="num">Benzina self</th>
+          <th class="num">Rispetto alla media</th><th class="num">Gasolio self</th>
+        </tr>
+      </thead>
+      <tbody>
+        {marche.map((m, i) => (
+          <tr>
+            <td>{i + 1}. <a href={`/prezzi-carburanti/marca/${m.slug}/`}>{m.name}</a></td>
+            <td class="num">{numero(m.count)}</td>
+            <td class="num">{prezzo(m.stats.benzina!.avg)}</td>
+            <td class="num">{diffCent(m.stats.benzina!.avg, naz.benzina!.avg)}</td>
+            <td class="num">{prezzo(m.stats.gasolio!.avg)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Come leggere la classifica</h2>
+  <ul>
+    <li>
+      Ogni media è la media aritmetica dei prezzi degli impianti di quella rete: ogni impianto pesa allo stesso modo,
+      indipendentemente dai litri venduti.
+    </li>
+    <li>
+      Le reti non sono distribuite allo stesso modo sul territorio. Una rete presente soprattutto in regioni care, o
+      con molte aree di servizio in autostrada, ha una media più alta anche a parità di politica di prezzo.
+    </li>
+    <li>
+      Il marchio è quello dichiarato dal gestore al Ministero. Le reti con meno di {SOGLIA} impianti non compaiono in
+      questa classifica.
+    </li>
+    <li>Sono confrontati solo i carburanti standard: i prodotti speciali dei singoli marchi restano fuori.</li>
+  </ul>
+
+  <h2>Quanto cambiano i prezzi dentro la stessa rete</h2>
+  <p>
+    La media non dice se gli impianti di una rete hanno tutti lo stesso prezzo o prezzi diversi. Per saperlo abbiamo
+    calcolato, per ogni rete, l'intervallo in cui cade il prezzo della benzina in self di nove impianti su dieci.
+  </p>
+  <p>
+    L'intervallo più stretto è quello {diRete(stretta.m)}: da {prezzo(stretta.da)} a {prezzo(stretta.a)} euro al litro,
+    {cent(stretta.ampiezza)} centesimi di ampiezza. Il più ampio è quello {diRete(ampia.m)}: da {prezzo(ampia.da)} a
+    {prezzo(ampia.a)} euro al litro, {cent(ampia.ampiezza)} centesimi.
+  </p>
+  <div class="table-wrapper">
+    <table class="pp-table">
+      <thead>
+        <tr><th>Rete</th><th class="num">Nove impianti su dieci tra</th><th class="num">Ampiezza</th></tr>
+      </thead>
+      <tbody>
+        {intervalli.map((r) => (
+          <tr>
+            <td><a href={`/prezzi-carburanti/marca/${r.m.slug}/`}>{r.m.name}</a></td>
+            <td class="num">{prezzo(r.da)} e {prezzo(r.a)}</td>
+            <td class="num">{cent(r.ampiezza)} cent</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Dove l'intervallo è ampio, il marchio da solo non dice quanto pagherai: conviene confrontare i distributori della
+    propria zona. Parti
+    dall'elenco delle <a href="/prezzi-carburanti/province/">province</a> o da quello
+    dei <a href="/prezzi-carburanti/marca/">marchi</a>. Sui distributori senza marchio c'è una guida dedicata:
+    <a href="/guide/pompe-bianche/">pompe bianche</a>.
+  </p>
+</GuidaLayout>
