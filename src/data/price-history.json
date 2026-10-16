@@ -43,5 +43,14 @@
   "metano": 1.927,
   "benzinaServito": 2.173,
   "gasolioServito": 2.387
+ },
+ {
+  "date": "2026-10-15",
+  "benzina": 2.034,
+  "gasolio": 2.255,
+  "gpl": 0.781,
+  "metano": 1.935,
+  "benzinaServito": 2.172,
+  "gasolioServito": 2.388
  }
 ]
