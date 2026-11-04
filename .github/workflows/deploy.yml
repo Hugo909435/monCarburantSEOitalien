@@ -20,7 +20,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
 
     steps:
       - name: Checkout du dépôt
@@ -35,8 +35,12 @@ jobs:
       - name: Installation des dépendances
         run: npm ci
 
+      - name: Tests de téléchargement et de validation des données
+        run: npm test
+
       # S'arrête sans rien écrire si le fichier du ministère est incomplet.
       - name: Téléchargement des prix du MIMIT
+        timeout-minutes: 8
         run: node scripts/fetch-fuel-data.js
 
       - name: Build Astro
@@ -66,8 +70,8 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           if [ -z "$FTP_HOST" ] || [ -z "$FTP_USER" ] || [ -z "$FTP_PASSWORD" ]; then
-            echo "::warning::Secrets FTP_HOST, FTP_USER ou FTP_PASSWORD absents : site construit mais non déployé."
-            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Secrets FTP_HOST, FTP_USER ou FTP_PASSWORD absents : impossible de déployer les prix."
+            exit 1
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
@@ -134,3 +138,15 @@ jobs:
           done
           echo "::error::Déploiement échoué après 3 tentatives."
           exit 1
+
+      - name: Contrôle des prix réellement servis après déploiement
+        if: steps.ftp.outputs.ready == 'true'
+        timeout-minutes: 4
+        run: npm run verify-deployment
+
+      - name: Résumé en cas d'échec
+        if: failure()
+        run: |
+          echo "::error::La mise à jour des prix n'a pas été confirmée. Consulter l'étape en échec et vérifier https://mio-carburante.it/data/meta.json."
+          echo "### Mise à jour des prix non confirmée" >> "$GITHUB_STEP_SUMMARY"
+          echo "Consulter l'étape en échec. Le contrôle public doit confirmer la date et le nombre de stations du build, ainsi que la date affichée sur l'accueil." >> "$GITHUB_STEP_SUMMARY"

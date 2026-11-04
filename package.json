@@ -4,13 +4,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test": "node --test scripts/*.test.js",
     "dev": "astro dev",
     "build": "node scripts/fetch-fuel-data.js && astro build",
     "build:astro": "astro build",
     "preview": "astro preview",
     "astro": "astro",
     "fetch-fuel": "node scripts/fetch-fuel-data.js",
-    "fetch-fuel:offline": "node scripts/fetch-fuel-data.js --offline"
+    "fetch-fuel:offline": "node scripts/fetch-fuel-data.js --offline",
+    "verify-deployment": "node scripts/verify-deployment.js"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",

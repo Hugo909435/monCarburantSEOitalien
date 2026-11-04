@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PROVINCE, REGIONI, toSlug, nomeProprio } from './geo-italia.js';
 import { AUTOSTRADE, highwayCode } from './autostrade-italia.js';
+import { downloadCsv, validateDatasets, extractionTimestamp, errorDetail } from './fuel-download.js';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const OUT = join(ROOT, 'src', 'data', 'fuel');
@@ -66,13 +67,11 @@ const MIN_BRAND = 40; // marchi con meno impianti confluiscono in "Altri marchi"
 
 async function download(name) {
   const cached = join(CACHE, `${name}.csv`);
-  if (OFFLINE && existsSync(cached)) return readFileSync(cached, 'utf-8');
-  const res = await fetch(SOURCES[name], { signal: AbortSignal.timeout(120_000), headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
-  const text = await res.text();
-  mkdirSync(CACHE, { recursive: true });
-  writeFileSync(cached, text, 'utf-8');
-  return text;
+  if (OFFLINE) {
+    if (!existsSync(cached)) throw new Error(`${name}: cache assente in modalità offline.`);
+    return readFileSync(cached, 'utf-8').replace(/^\uFEFF/, '');
+  }
+  return downloadCsv(name, SOURCES[name]);
 }
 
 /** "06/10/2026 20:00:07" → Date (ora italiana, trattata come UTC: serve solo l'età in giorni) */
@@ -136,12 +135,15 @@ const writeJson = (path, data) => writeFileSync(path, JSON.stringify(data), 'utf
 
 async function main() {
   console.log(`\n⛽ fetch-fuel-data.js (MIMIT open data${OFFLINE ? ', offline' : ''})\n`);
-  const [impiantiCsv, prezziCsv] = await Promise.all([download('impianti'), download('prezzi')]);
+  const results = await Promise.allSettled([download('impianti'), download('prezzi')]);
+  const failures = results.filter((r) => r.status === 'rejected');
+  if (failures.length) throw new AggregateError(failures.map((r) => r.reason), failures.map((r) => r.reason.message).join('\n'));
+  const [impiantiCsv, prezziCsv] = results.map((r) => r.value);
+  const estrazione = validateDatasets(impiantiCsv, prezziCsv, { offline: OFFLINE });
+  if (OFFLINE) console.warn('   ATTENZIONE: dati offline, freschezza non verificata. Solo sviluppo locale.');
 
   // ── Anagrafica ──────────────────────────────────────────────────────────
   const impLines = impiantiCsv.split(/\r?\n/);
-  const estrazione = impLines[0].match(/(\d{4}-\d{2}-\d{2})/)?.[1];
-  if (!estrazione) throw new Error('Data di estrazione non trovata nella prima riga.');
   const refTime = Date.parse(`${estrazione}T08:00:00Z`);
 
   const impianti = new Map();
@@ -242,6 +244,13 @@ async function main() {
   console.log(`   Impianti attivi: ${impianti.size}, con prezzo valido: ${stations.length} (prezzi scartati: ${scartati})`);
   if (stations.length < MIN_IMPIANTI) throw new Error(`Solo ${stations.length} impianti con prezzo: dati incompleti, nessun file scritto.`);
 
+  // Non sostituire la cache con risposte HTML, estrazioni vecchie o incomplete.
+  if (!OFFLINE) {
+    mkdirSync(CACHE, { recursive: true });
+    writeFileSync(join(CACHE, 'impianti.csv'), impiantiCsv, 'utf-8');
+    writeFileSync(join(CACHE, 'prezzi.csv'), prezziCsv, 'utf-8');
+  }
+
   // ── Marchi ──────────────────────────────────────────────────────────────
   const brandCount = Map.groupBy(stations, (s) => s.bandiera);
   for (const s of stations) {
@@ -325,7 +334,7 @@ async function main() {
 
   const meta = {
     // I prezzi sono quelli in vigore alle 8 del giorno di estrazione.
-    lastUpdate: `${estrazione}T08:00:00+02:00`,
+    lastUpdate: extractionTimestamp(estrazione),
     estrazione,
     generatedAt: new Date().toISOString(),
     totalStations: stations.length,
@@ -372,6 +381,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('\n❌ fetch-fuel-data.js:', err.message);
+  console.error('\n❌ fetch-fuel-data.js:', errorDetail(err));
   process.exit(1);
 });

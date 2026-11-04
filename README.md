@@ -13,6 +13,8 @@ npm run fetch-fuel:offline  # régénère depuis les fichiers déjà dans .cache
 npm run dev                 # http://localhost:4321
 npm run build               # fetch-fuel + site statique dans /dist
 npm run build:astro         # site seul, avec les données déjà générées
+npm test                    # cas de panne réseau, validation CSV et contrôle public
+npm run verify-deployment   # compare le site public aux données du dernier build
 ```
 
 ## Données
@@ -29,6 +31,12 @@ Source unique : open data du MIMIT (ministère italien), licence **IODL 2.0**, u
 - prix de plus de 30 jours ou hors bornes écartés ;
 - arrêt sans rien écrire si moins de 15 000 stations ont un prix (fichier incomplet).
 
+Le téléchargement utilise un délai de connexion explicite de 30 secondes, un délai total de 120 secondes par tentative (corps du fichier compris), et jusqu’à trois tentatives avec des pauses de 5 puis 10 secondes. Les erreurs indiquent le fichier, l’URL et la cause réseau ou HTTP. Les redirections sont limitées à trois ; une redirection HTTPS vers HTTP est refusée.
+
+Avant toute génération, les deux CSV doivent avoir le format attendu et la même date d’extraction. En mode normal, cette date ne peut être future ni remonter à plus de trois jours calendaires en Italie (tolérance de publication). Les réponses HTML, fichiers vides et données périmées sont refusés ; aucun ancien cache n’est utilisé automatiquement. Le cache n’est remplacé qu’après le contrôle du nombre de stations.
+
+`fetch-fuel:offline` reste réservé au développement : il exige les deux fichiers en cache, vérifie leur format et leurs dates concordantes, mais autorise leur ancienneté avec un avertissement. Il n’est pas utilisé dans le déploiement. L’heure de relevé de 8 h porte le décalage réel de Rome (+01:00 en hiver, +02:00 en été).
+
 Fichiers générés, non versionnés : `src/data/fuel/` et `public/data/`.
 Fichier versionné : `src/data/price-history.json` (une ligne par jour, pour les futurs graphiques).
 
@@ -38,7 +46,11 @@ Dépôt : `github.com/Hugo909435/monCarburantSEOitalien`. Hébergement : Hosting
 
 `.github/workflows/deploy.yml` télécharge les prix, construit le site, enregistre la ligne du jour dans `price-history.json` et envoie `dist/` par FTP. Il tourne deux fois par jour (8 h 30 et 13 h 30 UTC), à chaque push sur `main`, et à la demande depuis l'onglet Actions.
 
-Secrets à définir dans le dépôt GitHub : `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`. Sans eux, le site est construit mais pas envoyé. Le compte FTP doit ouvrir directement le `public_html` du site italien : le déploiement efface du serveur ce qui n'est pas dans `dist/`, et s'annule si le `robots.txt` distant ne cite pas le domaine.
+Secrets à définir dans le dépôt GitHub : `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`. Leur absence fait échouer le workflow au lieu de terminer avec un site non déployé. Le compte FTP doit ouvrir directement le `public_html` du site italien : le déploiement efface du serveur ce qui n'est pas dans `dist/`, et s'annule si le `robots.txt` distant ne cite pas le domaine.
+
+Après le FTP, `verify-deployment` contrôle les métadonnées publiques et la date affichée sur l’accueil, avec jusqu’à quatre essais pour laisser les caches se renouveler. La date et le nombre de stations doivent correspondre exactement à `dist/data/meta.json`, dont la fraîcheur est aussi contrôlée. Les requêtes portent un paramètre unique pour éviter les anciennes copies du cache HTTP. Une différence persistante fait échouer le workflow et un résumé signale que la mise à jour n’a pas été confirmée.
+
+Pour diagnostiquer une panne : ouvrir l’exécution en échec dans GitHub Actions et lire l’étape précise. Si le MIMIT ne répond à aucune tentative, il faut rétablir l’accès à la source officielle ; ces reprises ne garantissent pas la disponibilité du serveur. Une fois l’accès rétabli, relancer le workflow avec « Run workflow » et vérifier son contrôle final. Ne pas contourner l’échec en déployant un build hors ligne périmé.
 
 ## Pages
 
